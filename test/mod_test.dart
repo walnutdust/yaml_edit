@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:yaml_edit/yaml_edit.dart';
+import 'package:yaml_edit/src/mod.dart';
 
 import 'mod_utils.dart';
 
@@ -112,35 +112,35 @@ recipe:
 
   group('updates', () {
     test('simple block map', () {
-      var doc = loadYaml("YAML: YAML Ain't Markup Language");
+      var doc = ModifiableYAML("YAML: YAML Ain't Markup Language");
       doc['YAML'] = 'hi';
 
       expect(doc.toString(), equals('YAML: hi'));
     });
 
     test('simple block map with comment', () {
-      var doc = loadYaml("YAML: YAML Ain't Markup Language # comment");
+      var doc = ModifiableYAML("YAML: YAML Ain't Markup Language # comment");
       doc['YAML'] = 'hi';
 
       expect(doc.toString(), equals('YAML: hi # comment'));
     });
 
     test('simple flow map', () {
-      var doc = loadYaml("{YAML: YAML Ain't Markup Language}");
+      var doc = ModifiableYAML("{YAML: YAML Ain't Markup Language}");
       doc['YAML'] = 'hi';
 
       expect(doc.toString(), equals('{YAML: hi}'));
     });
 
     test('simple flow map with spacing', () {
-      var doc = loadYaml("{YAML:  YAML Ain't Markup Language }");
+      var doc = ModifiableYAML("{YAML:  YAML Ain't Markup Language }");
       doc['YAML'] = 'hi';
 
       expect(doc.toString(), equals('{YAML:  hi}'));
     });
 
     test('simple flow map with spacing (2)', () {
-      var doc = loadYaml(
+      var doc = ModifiableYAML(
           "{ YAML:  YAML Ain't Markup Language , XML: Extensible Markup Language , HTML: Hypertext Markup Language }");
       doc['XML'] = 'XML Markup Language';
 
@@ -151,49 +151,49 @@ recipe:
     });
 
     test('simple block list', () {
-      var doc = loadYaml("- YAML Ain't Markup Language");
+      var doc = ModifiableYAML("- YAML Ain't Markup Language");
       doc[0] = 'hi';
 
       expect(doc.toString(), equals('- hi'));
     });
 
     test('simple block list with comment', () {
-      var doc = loadYaml("- YAML Ain't Markup Language # comment");
+      var doc = ModifiableYAML("- YAML Ain't Markup Language # comment");
       doc[0] = 'hi';
 
       expect(doc.toString(), equals('- hi # comment'));
     });
 
     test('simple block list with comment and spaces', () {
-      var doc = loadYaml("-  YAML Ain't Markup Language  # comment");
+      var doc = ModifiableYAML("-  YAML Ain't Markup Language  # comment");
       doc[0] = 'hi';
 
       expect(doc.toString(), equals('-  hi  # comment'));
     });
 
     test('simple flow list', () {
-      var doc = loadYaml("[YAML Ain't Markup Language]");
+      var doc = ModifiableYAML("[YAML Ain't Markup Language]");
       doc[0] = 'hi';
 
       expect(doc.toString(), equals('[hi]'));
     });
 
     test('simple flow list with spacing', () {
-      var doc = loadYaml("[ YAML Ain't Markup Language ]");
+      var doc = ModifiableYAML("[ YAML Ain't Markup Language ]");
       doc[0] = 'hi';
 
       expect(doc.toString(), equals('[ hi]'));
     });
 
     test('simple flow list with spacing (2)', () {
-      var doc = loadYaml('[ 0 , 1 , 2 , 3 ]');
+      var doc = ModifiableYAML('[ 0 , 1 , 2 , 3 ]');
       doc[1] = 4;
 
       expect(doc.toString(), equals('[ 0 , 4, 2 , 3 ]'));
     });
 
     test('nested block map', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4
@@ -212,7 +212,7 @@ c: 3
     });
 
     test('nested block map (2)', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: {d: 4, e: 5}
 c: 3
@@ -227,7 +227,7 @@ c: 3
     });
 
     test('nested block map scalar -> flow list', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4
@@ -249,7 +249,7 @@ c: 3
     });
 
     test('nested block map -> scalar', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4
@@ -266,7 +266,7 @@ c: 3
     });
 
     test('nested block map -> scalar (2)', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4
@@ -287,7 +287,7 @@ b: 2
     });
 
     test('nested block map scalar -> flow map', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4
@@ -308,7 +308,7 @@ c: 3
     });
 
     test('nested block map with comments', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4
@@ -327,7 +327,7 @@ c: 3
     });
 
     test('nested block map with comments (2)', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 
   d: 4 # comment
@@ -350,7 +350,7 @@ c: 3
     });
 
     test('nested list', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - - 0
   - 1
@@ -370,7 +370,7 @@ c: 3
     });
 
     test('nested list flow map -> scalar', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - {a: 1, b: 2}
 - 2
@@ -386,7 +386,7 @@ c: 3
     });
 
     test('nested list-map-list-number update', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - a:
    - 1
@@ -410,7 +410,7 @@ c: 3
 
   group('removeAt', () {
     test('simple block list ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - 1
 - 2
@@ -425,7 +425,7 @@ c: 3
     });
 
     test('simple block list (2)', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - [1,2,3]
 - 2
@@ -440,7 +440,7 @@ c: 3
     });
 
     test('simple block list (3)', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - {a: 1, b: 2}
 - 2
@@ -454,7 +454,7 @@ c: 3
 '''));
     });
     test('simple block list with comments', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - 1 # comments
 - 2
@@ -469,19 +469,19 @@ c: 3
     });
 
     test('simple flow list', () {
-      var doc = loadYaml('[1, 2, 3]');
+      var doc = ModifiableYAML('[1, 2, 3]');
       doc.removeAt(1);
       expect(doc.toString(), equals('[1, 3]'));
     });
 
     test('simple flow list (2)', () {
-      var doc = loadYaml('[1, "b", "c"]');
+      var doc = ModifiableYAML('[1, "b", "c"]');
       doc.removeAt(1);
       expect(doc.toString(), equals('[1, "c"]'));
     });
 
     test('simple flow list (3)', () {
-      var doc = loadYaml('[1, {a: 1}, "c"]');
+      var doc = ModifiableYAML('[1, {a: 1}, "c"]');
       doc.removeAt(1);
       expect(doc.toString(), equals('[1, "c"]'));
     });
@@ -489,7 +489,7 @@ c: 3
 
   group('remove', () {
     test('simple block list ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - 1
 - 2
@@ -504,32 +504,31 @@ c: 3
     });
 
     test('simple flow list ', () {
-      var doc = loadYaml('[1, 2, 3]');
+      var doc = ModifiableYAML('[1, 2, 3]');
       doc.remove(2);
       expect(doc.toString(), equals('[1, 3]'));
     });
 
     test('simple flow list (2)', () {
-      var doc = loadYaml('[1, 2, 3]');
+      var doc = ModifiableYAML('[1, 2, 3]');
       doc.remove(3);
       expect(doc.toString(), equals('[1, 2]'));
     });
 
-    // !(walnut): the space before the two should be removed if possible too.
     test('simple flow list (3)', () {
-      var doc = loadYaml('[1, 2, 3]');
+      var doc = ModifiableYAML('[1, 2, 3]');
       doc.remove(1);
       expect(doc.toString(), equals('[ 2, 3]'));
     });
 
     test('simple flow list (4)', () {
-      var doc = loadYaml('[1, 2, 3]');
+      var doc = ModifiableYAML('[1, 2, 3]');
       doc.remove(4);
       expect(doc.toString(), equals('[1, 2, 3]'));
     });
 
     test('simple block map', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 2
 c: 3
@@ -542,7 +541,7 @@ c: 3
     });
 
     test('simple flow map ', () {
-      var doc = loadYaml('{a: 1, b: 2, c: 3}');
+      var doc = ModifiableYAML('{a: 1, b: 2, c: 3}');
       doc.remove('b');
       expect(doc.toString(), equals('{a: 1, c: 3}'));
     });
@@ -550,7 +549,7 @@ c: 3
 
   group('add', () {
     test('simple block list ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - 1
 - 2
@@ -567,7 +566,7 @@ c: 3
     });
 
     test('list to simple block list ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - 1
 - 2
@@ -586,7 +585,7 @@ c: 3
     });
 
     test('nested block list ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - - 1
   - 2
@@ -601,7 +600,7 @@ c: 3
     });
 
     test('block list to nested block list ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 - 0
 - - 1
   - 2
@@ -618,19 +617,19 @@ c: 3
     });
 
     test('simple flow list ', () {
-      var doc = loadYaml('[0, 1, 2]');
+      var doc = ModifiableYAML('[0, 1, 2]');
       doc.add(3);
       expect(doc.toString(), equals('[0, 1, 2, 3]'));
     });
 
     test('empty flow list ', () {
-      var doc = loadYaml('[]');
+      var doc = ModifiableYAML('[]');
       doc.add(0);
       expect(doc.toString(), equals('[0]'));
     });
 
     test('simple block map ', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 2
 c: 3
@@ -645,7 +644,7 @@ d: 4
     });
 
     test('simple block map with trailing newline', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 2
 c: 3
@@ -664,7 +663,7 @@ d: 4
     });
 
     test('nested block map', () {
-      var doc = loadYaml('''
+      var doc = ModifiableYAML('''
 a: 1
 b: 2
 c: 
@@ -681,13 +680,13 @@ c:
     });
 
     test('simple flow map', () {
-      var doc = loadYaml('{a: 1, b: 2}');
+      var doc = ModifiableYAML('{a: 1, b: 2}');
       doc['c'] = 3;
       expect(doc.toString(), equals('{a: 1, b: 2, c: 3}'));
     });
 
     test('empty flow list ', () {
-      var doc = loadYaml('{}');
+      var doc = ModifiableYAML('{}');
       doc['a'] = 1;
       expect(doc.toString(), equals('{a: 1}'));
     });

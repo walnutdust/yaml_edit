@@ -4,23 +4,21 @@ import 'package:source_span/source_span.dart';
 import 'package:yaml/src/equality.dart';
 import 'package:yaml/yaml.dart';
 
-dynamic loadYaml = (String yaml) => _YAML(yaml);
-
 /// An interface for modifiable YAML documents which preserve Dart List and Map
 /// interfaces. Every time a modification takes place, the string is re-parsed,
 /// so users are guaranteed that calling toString() will result in valid YAML.
-class _YAML {
+class ModifiableYAML {
   /// Original YAML string from which this instance is constructed.
   String yaml;
 
   /// Root node of YAML AST.
-  // Definitely a _ModifiableYamlNode, but dynamic allows us to implement both
-  // Map and List operations easily.
+  /// Definitely a _ModifiableYamlNode, but dynamic allows us to implement both
+  /// Map and List operations easily.
   dynamic _contents;
 
   static const int DEFAULT_INDENTATION = 2;
 
-  _YAML(this.yaml) {
+  ModifiableYAML(this.yaml) {
     var contents = loadYamlNode(yaml);
     _contents = _modifiedYamlNodeFrom(contents, this);
   }
@@ -28,8 +26,7 @@ class _YAML {
   @override
   String toString() => yaml;
 
-  // MARK - methods to simulate a List/Map interface.
-  dynamic operator [](key) => _YAMLPath([key], this);
+  dynamic operator [](key) => _contents[key];
   operator []=(key, value) => _contents[key] = value;
 
   dynamic remove(Object value) => _contents.remove(value);
@@ -39,18 +36,25 @@ class _YAML {
 
   void add(Object value) => _contents.add(value);
 
-  // MARK - methods that modifies and reloads the YAML
+  /// Utility method to insert [replacement] at [offset] on [yaml].
   void insert(int offset, String replacement) =>
       _replaceRange(offset, offset, replacement);
 
+  /// Utility method to replace the substring in [yaml] as denoted by
+  /// the start and end of [span] with [replacement].
   void replaceRangeFromSpan(SourceSpan span, String replacement) {
     var start = span.start.offset;
     var end = span.end.offset;
     _replaceRange(start, end, replacement);
   }
 
+  /// Utility method to remove the substring of [yaml] within the range
+  /// provided by [start] and [end].
   void _removeRange(int start, int end) => _replaceRange(start, end, '');
 
+  /// Utility method to replace the substring of [yaml] within the range
+  /// provided by [start] and [end] with [replacement], and then reloading
+  /// the data structure represented by [yaml].
   void _replaceRange(int start, int end, String replacement) {
     yaml = yaml.replaceRange(start, end, replacement);
     var contents = loadYamlNode(yaml);
@@ -58,60 +62,22 @@ class _YAML {
   }
 }
 
-/// Interface for a path of keys in a YAML document. This class only stores
-/// the path from the root of a YAML document, and the value is only dynamically
-/// obtained when the value method is called. When using this class, there is a
-/// possibility that the YAML document has been modified in such a way that
-/// this root becomes the child of a parent that does not exist in the YAML tree,
-/// and can lead to errors when called.
-class _YAMLPath {
-  // Path from parent to current node.
-  final List path;
-
-  // Parent _YAML from which the path is defined
-  final _YAML parent;
-
-  _YAMLPath(this.path, this.parent);
-
-  // Performs a "dynamic dispatch"
-  dynamic get value {
-    dynamic current = parent._contents;
-    for (var elem in path) {
-      current = current[elem];
-      // TODO - null/error key checks
-    }
-
-    return current;
-  }
-
-  dynamic operator [](key) => _YAMLPath([...path, key], parent);
-
-  operator []=(key, newValue) => value[key] = newValue;
-
-  dynamic remove(Object toRemove) => value.remove(toRemove);
-  dynamic removeAt(int index) => value.removeAt(index);
-
-  void add(Object newValue) => value.add(newValue);
-
-  @override
-  String toString() {
-    return value.toString();
-  }
-}
-
 /// An interface for modifiable YAML nodes from a YAML AST.
-// On top of the [YamlNode] elements, [_ModifiableYamlNode] also
-// has the base [_YAML] object so that we can imitate modifications.
+/// On top of the [YamlNode] elements, [_ModifiableYamlNode] also
+/// has the base [ModifiableYAML] object so that we can imitate modifications.
 abstract class _ModifiableYamlNode extends YamlNode {
   SourceSpan _span;
 
   @override
   SourceSpan get span => _span;
 
-  _YAML _baseYaml;
+  ModifiableYAML _baseYaml;
 }
 
-_ModifiableYamlNode _modifiedYamlNodeFrom(YamlNode node, _YAML baseYaml) {
+/// Creates a [_ModifiableYamlNode] from a [YamlNode]. Returns the original object
+/// if it is an instance of a [_ModifiableYamlNode].
+_ModifiableYamlNode _modifiedYamlNodeFrom(
+    YamlNode node, ModifiableYAML baseYaml) {
   switch (node.runtimeType) {
     case YamlList:
       return _ModifiableYamlList.from(node as YamlList, baseYaml);
@@ -129,6 +95,7 @@ _ModifiableYamlNode _modifiedYamlNodeFrom(YamlNode node, _YAML baseYaml) {
   }
 }
 
+/// A wrapped scalar parsed from YAML.
 class _ModifiableYamlScalar extends _ModifiableYamlNode {
   /// The [YamlScalar] from which this instance was created.
   final YamlScalar _yamlScalar;
@@ -136,7 +103,7 @@ class _ModifiableYamlScalar extends _ModifiableYamlNode {
   @override
   dynamic get value => _yamlScalar.value;
 
-  _ModifiableYamlScalar.from(this._yamlScalar, _YAML baseYaml) {
+  _ModifiableYamlScalar.from(this._yamlScalar, ModifiableYAML baseYaml) {
     _span = _yamlScalar.span;
     _baseYaml = baseYaml;
   }
@@ -145,13 +112,17 @@ class _ModifiableYamlScalar extends _ModifiableYamlNode {
   String toString() => _yamlScalar.value.toString();
 }
 
+/// A wrapped list parsed from YAML, extended with methods to allow modification
+/// on the base YAML document.
 class _ModifiableYamlList extends _ModifiableYamlNode
     with collection.ListMixin {
   List<_ModifiableYamlNode> nodes;
-  CollectionStyle style;
+
+  final CollectionStyle style;
 
   @override
   int get length => nodes.length;
+
   @override
   set length(int index) =>
       throw UnsupportedError("This method shouldn't be called!");
@@ -159,10 +130,13 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   @override
   List get value => this;
 
-  _ModifiableYamlList.from(YamlList yamlList, _YAML baseYaml) {
+  /// Initializes a [_ModifiableYamlList] from a [YamlList].
+  ///
+  /// [baseYaml] is the base [ModifiableYAML] that [yamlList] is taken from.
+  _ModifiableYamlList.from(YamlList yamlList, ModifiableYAML baseYaml)
+      : style = yamlList.style {
     _baseYaml = baseYaml;
     _span = yamlList.span;
-    style = yamlList.style;
 
     nodes = [];
     for (var node in yamlList.nodes) {
@@ -195,7 +169,6 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   void operator []=(int index, newValue) {
     var currValue = nodes[index];
 
-    // TODO(walnut): list/map new values
     _baseYaml.replaceRangeFromSpan(currValue._span, newValue.toString());
   }
 
@@ -204,16 +177,16 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     var removedNode = nodes.removeAt(index);
 
     if (style == CollectionStyle.FLOW) {
-      removeFromFlowList(removedNode._span, index);
+      _removeFromFlowList(removedNode, index);
     } else {
-      removeFromBlockList(removedNode._span);
+      _removeFromBlockList(removedNode);
     }
 
     return removedNode;
   }
 
   @override
-  bool remove(Object elem) {
+  bool remove(dynamic elem) {
     var index = indexOf(elem);
     if (index == -1) return false;
 
@@ -222,15 +195,18 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   }
 
   @override
-  void add(Object elem) {
+  void add(dynamic elem) {
     if (style == CollectionStyle.FLOW) {
-      addToFlowList(elem);
+      _addToFlowList(elem);
     } else {
-      addToBlockList(elem);
+      _addToBlockList(elem);
     }
   }
 
-  void removeFromFlowList(SourceSpan span, int index) {
+  /// Performs the removal of [removedNode] from the base yaml, noting that
+  /// the current list is a flow list.
+  void _removeFromFlowList(_ModifiableYamlNode removedNode, int index) {
+    var span = removedNode._span;
     var start = span.start.offset;
     var end = span.end.offset;
 
@@ -244,7 +220,10 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     _baseYaml._replaceRange(start, end, '');
   }
 
-  void removeFromBlockList(SourceSpan span) {
+  /// Performs the removal of [removedNode] from the base yaml, noting that
+  /// the current list is a block list.
+  void _removeFromBlockList(_ModifiableYamlNode removedNode) {
+    var span = removedNode._span;
     var start = _baseYaml.yaml.lastIndexOf('\n', span.start.offset);
     var end = _baseYaml.yaml.indexOf('\n', span.end.offset);
     _baseYaml._replaceRange(start, end, '');
@@ -262,21 +241,26 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     return -1;
   }
 
-  void addToFlowList(Object elem) {
+  /// Performs the addition of [elem] into the base yaml, noting that the current
+  /// list is a flow list.
+  void _addToFlowList(dynamic elem) {
     var valueString = getFlowString(elem);
     if (nodes.isNotEmpty) valueString = ', ' + valueString;
 
     _baseYaml.insert(span.end.offset - 1, valueString);
   }
 
-  void addToBlockList(Object elem) {
+  /// Performs the addition of [elem] into the base yaml, noting that the current
+  /// list is a block list.
+  void _addToBlockList(dynamic elem) {
     var valueString =
-        getBlockString(elem, indentation + _YAML.DEFAULT_INDENTATION);
+        getBlockString(elem, indentation + ModifiableYAML.DEFAULT_INDENTATION);
     var formattedValue = ''.padLeft(indentation) + '- ';
 
     if (isCollection(elem)) {
-      formattedValue +=
-          valueString.substring(indentation + _YAML.DEFAULT_INDENTATION) + '\n';
+      formattedValue += valueString
+              .substring(indentation + ModifiableYAML.DEFAULT_INDENTATION) +
+          '\n';
     } else {
       formattedValue += valueString + '\n';
     }
@@ -284,13 +268,15 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   }
 }
 
+/// A wrapped map parsed from YAML, extended with methods to allow modification
+/// on the base YAML document.
 class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   @override
   int get length => nodes.length;
 
   Map<dynamic, _ModifiableYamlNode> nodes;
 
-  CollectionStyle style;
+  final CollectionStyle style;
 
   /// Gets the indentation level of the map. This is 0 if it is a flow map,
   /// but returns the number of spaces before the keys for block maps.
@@ -309,10 +295,10 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     return lastSpanOffset - lastNewLine - 1;
   }
 
-  _ModifiableYamlMap.from(YamlMap yamlMap, _YAML baseYaml) {
+  _ModifiableYamlMap.from(YamlMap yamlMap, ModifiableYAML baseYaml)
+      : style = yamlMap.style {
     _span = yamlMap.span;
     _baseYaml = baseYaml;
-    style = yamlMap.style;
 
     nodes = deepEqualsMap<dynamic, _ModifiableYamlNode>();
     for (var entry in yamlMap.nodes.entries) {
@@ -327,35 +313,35 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   void operator []=(key, newValue) {
     if (!nodes.containsKey(key)) {
       if (style == CollectionStyle.FLOW) {
-        addToFlowMap(key, newValue);
+        _addToFlowMap(key, newValue);
       } else {
-        addToBlockMap(key, newValue);
+        _addToBlockMap(key, newValue);
       }
     } else {
       if (style == CollectionStyle.FLOW) {
-        replaceInFlowMap(key, newValue);
+        _replaceInFlowMap(key, newValue);
       } else {
-        replaceInBlockMap(key, newValue);
+        _replaceInBlockMap(key, newValue);
       }
     }
   }
 
-  YamlNode getKeyNode(Object key) {
+  /// Returns the [YamlNode] given by the provided [key]
+  YamlNode getKeyNode(dynamic key) {
     return (nodes.keys.firstWhere((node) => node.value == key) as YamlNode);
   }
 
   @override
-  _ModifiableYamlNode remove(Object key) {
+  _ModifiableYamlNode remove(dynamic key) {
     if (!nodes.containsKey(key)) return null;
 
-    var keyNode =
-        (nodes.keys.firstWhere((node) => node.value == key) as YamlNode);
+    var keyNode = getKeyNode(key);
     var valueNode = nodes.remove(key);
 
     if (style == CollectionStyle.FLOW) {
-      removeFromFlowMap(keyNode.span, valueNode.span, key);
+      _removeFromFlowMap(keyNode, valueNode, key);
     } else {
-      removeFromBlockMap(keyNode.span, valueNode.span);
+      _removeFromBlockMap(keyNode, valueNode);
     }
 
     return valueNode;
@@ -364,7 +350,9 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   @override
   Map get value => this;
 
-  void addToFlowMap(Object key, Object newValue) {
+  /// Adds the [key]:[newValue] pairing into the map, bearing in mind
+  /// that it is a flow Map.
+  void _addToFlowMap(dynamic key, dynamic newValue) {
     // The -1 accounts for the closing bracket.
     if (nodes.isEmpty) {
       _baseYaml.insert(span.end.offset - 1, '$key: $newValue');
@@ -373,9 +361,11 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     }
   }
 
-  void addToBlockMap(Object key, Object newValue) {
-    var valueString =
-        getBlockString(newValue, indentation + _YAML.DEFAULT_INDENTATION);
+  /// Adds the [key]:[newValue] pairing into the map, bearing in mind
+  /// that it is a block Map.
+  void _addToBlockMap(dynamic key, dynamic newValue) {
+    var valueString = getBlockString(
+        newValue, indentation + ModifiableYAML.DEFAULT_INDENTATION);
     var formattedValue = ' ' * indentation + '$key: ';
     var offset = span.end.offset;
 
@@ -393,7 +383,9 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     _baseYaml.insert(offset, formattedValue);
   }
 
-  void replaceInFlowMap(Object key, Object newValue) {
+  /// Updates the [key]:[newValue] pairing into the map, bearing in mind
+  /// that it is a flow Map.
+  void _replaceInFlowMap(dynamic key, dynamic newValue) {
     var valueSpan = nodes[key].span;
     var valueString = getFlowString(newValue);
 
@@ -401,10 +393,12 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     _baseYaml.replaceRangeFromSpan(valueSpan, valueString);
   }
 
-  void replaceInBlockMap(Object key, Object newValue) {
+  /// Updates the [key]:[newValue] pairing into the map, bearing in mind
+  /// that it is a block Map.
+  void _replaceInBlockMap(dynamic key, dynamic newValue) {
     var value = nodes[key];
-    var valueString =
-        getBlockString(newValue, indentation + _YAML.DEFAULT_INDENTATION);
+    var valueString = getBlockString(
+        newValue, indentation + ModifiableYAML.DEFAULT_INDENTATION);
     var start = getKeyNode(key).span.end.offset + 2;
     var end = _getContentSensitiveEnd(value);
 
@@ -419,7 +413,12 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   @override
   Iterable get keys => nodes.keys.map((node) => node.value);
 
-  void removeFromFlowMap(SourceSpan keySpan, SourceSpan valueSpan, Object key) {
+  /// Removes the [key]:[newValue] pairing from the map, bearing in mind
+  /// that it is a flow Map.
+  void _removeFromFlowMap(
+      YamlNode keyNode, _ModifiableYamlNode valueNode, Object key) {
+    var keySpan = keyNode.span;
+    var valueSpan = valueNode.span;
     var start = keySpan.start.offset;
     var end = valueSpan.end.offset;
 
@@ -433,7 +432,11 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     _baseYaml._removeRange(start, end);
   }
 
-  void removeFromBlockMap(SourceSpan keySpan, SourceSpan valueSpan) {
+  /// Removes the [key]:[newValue] pairing from the map, bearing in mind
+  /// that it is a block Map.
+  void _removeFromBlockMap(YamlNode keyNode, _ModifiableYamlNode valueNode) {
+    var keySpan = keyNode.span;
+    var valueSpan = valueNode.span;
     var start = _baseYaml.yaml.lastIndexOf('\n', keySpan.start.offset);
     var end = _baseYaml.yaml.indexOf('\n', valueSpan.end.offset);
     _baseYaml._removeRange(start, end);
@@ -467,7 +470,8 @@ String getBlockString(Object value, [int indentation = 0]) {
       if (!isCollection(entry.value)) return result + ' ${entry.value}';
 
       return '$result\n' +
-          getBlockString(entry.value, indentation + _YAML.DEFAULT_INDENTATION);
+          getBlockString(
+              entry.value, indentation + ModifiableYAML.DEFAULT_INDENTATION);
     }).join('\n');
   }
 
@@ -486,4 +490,5 @@ int _getContentSensitiveEnd(_ModifiableYamlNode node) {
   return node.span.end.offset;
 }
 
+/// Checks if the item is a Map or a List
 bool isCollection(Object item) => item is Map || item is List;
