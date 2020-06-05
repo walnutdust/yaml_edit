@@ -112,37 +112,37 @@ recipe:
 
   group('updates', () {
     test('simple block map', () {
-      var doc = ModifiableYAML("YAML: YAML Ain't Markup Language");
-      doc['YAML'] = 'hi';
+      var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+      doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('YAML: hi'));
     });
 
     test('simple block map with comment', () {
-      var doc = ModifiableYAML("YAML: YAML Ain't Markup Language # comment");
-      doc['YAML'] = 'hi';
+      var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language # comment");
+      doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('YAML: hi # comment'));
     });
 
     test('simple flow map', () {
-      var doc = ModifiableYAML("{YAML: YAML Ain't Markup Language}");
-      doc['YAML'] = 'hi';
+      var doc = YamlEditBuilder("{YAML: YAML Ain't Markup Language}");
+      doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('{YAML: hi}'));
     });
 
     test('simple flow map with spacing', () {
-      var doc = ModifiableYAML("{YAML:  YAML Ain't Markup Language }");
-      doc['YAML'] = 'hi';
+      var doc = YamlEditBuilder("{YAML:  YAML Ain't Markup Language }");
+      doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('{YAML:  hi}'));
     });
 
     test('simple flow map with spacing (2)', () {
-      var doc = ModifiableYAML(
+      var doc = YamlEditBuilder(
           "{ YAML:  YAML Ain't Markup Language , XML: Extensible Markup Language , HTML: Hypertext Markup Language }");
-      doc['XML'] = 'XML Markup Language';
+      doc.setIn(['XML'], 'XML Markup Language');
 
       expect(
           doc.toString(),
@@ -151,56 +151,56 @@ recipe:
     });
 
     test('simple block list', () {
-      var doc = ModifiableYAML("- YAML Ain't Markup Language");
-      doc[0] = 'hi';
+      var doc = YamlEditBuilder("- YAML Ain't Markup Language");
+      doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('- hi'));
     });
 
     test('simple block list with comment', () {
-      var doc = ModifiableYAML("- YAML Ain't Markup Language # comment");
-      doc[0] = 'hi';
+      var doc = YamlEditBuilder("- YAML Ain't Markup Language # comment");
+      doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('- hi # comment'));
     });
 
     test('simple block list with comment and spaces', () {
-      var doc = ModifiableYAML("-  YAML Ain't Markup Language  # comment");
-      doc[0] = 'hi';
+      var doc = YamlEditBuilder("-  YAML Ain't Markup Language  # comment");
+      doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('-  hi  # comment'));
     });
 
     test('simple flow list', () {
-      var doc = ModifiableYAML("[YAML Ain't Markup Language]");
-      doc[0] = 'hi';
+      var doc = YamlEditBuilder("[YAML Ain't Markup Language]");
+      doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('[hi]'));
     });
 
     test('simple flow list with spacing', () {
-      var doc = ModifiableYAML("[ YAML Ain't Markup Language ]");
-      doc[0] = 'hi';
+      var doc = YamlEditBuilder("[ YAML Ain't Markup Language ]");
+      doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('[ hi]'));
     });
 
     test('simple flow list with spacing (2)', () {
-      var doc = ModifiableYAML('[ 0 , 1 , 2 , 3 ]');
-      doc[1] = 4;
+      var doc = YamlEditBuilder('[ 0 , 1 , 2 , 3 ]');
+      doc.setIn([1], 4);
 
       expect(doc.toString(), equals('[ 0 , 4, 2 , 3 ]'));
     });
 
     test('nested block map', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4
   e: 5
 c: 3
 ''');
-      doc['b']['e'] = 6;
+      doc.setIn(['b', 'e'], 6);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -212,12 +212,12 @@ c: 3
     });
 
     test('nested block map (2)', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: {d: 4, e: 5}
 c: 3
 ''');
-      doc['b']['e'] = 6;
+      doc.setIn(['b', 'e'], 6);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -227,14 +227,14 @@ c: 3
     });
 
     test('nested block map scalar -> flow list', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4
   e: 5
 c: 3
 ''');
-      doc['b']['e'] = [1, 2, 3];
+      doc.setIn(['b', 'e'], [1, 2, 3]);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -249,14 +249,14 @@ c: 3
     });
 
     test('nested block map -> scalar', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4
   e: 5
 c: 3
 ''');
-      doc['b'] = 2;
+      doc.setIn(['b'], 2);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -266,7 +266,7 @@ c: 3
     });
 
     test('nested block map -> scalar (2)', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4
@@ -275,7 +275,7 @@ b:
 
 # comment
 ''');
-      doc['b'] = 2;
+      doc.setIn(['b'], 2);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -287,14 +287,14 @@ b: 2
     });
 
     test('nested block map scalar -> flow map', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4
   e: 5
 c: 3
 ''');
-      doc['b']['e'] = {'x': 3, 'y': 4};
+      doc.setIn(['b', 'e'], {'x': 3, 'y': 4});
 
       expect(doc.toString(), equals('''
 a: 1
@@ -308,14 +308,14 @@ c: 3
     });
 
     test('nested block map with comments', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4
   e: 5 # comment
 c: 3
 ''');
-      doc['b']['e'] = 6;
+      doc.setIn(['b', 'e'], 6);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -327,7 +327,7 @@ c: 3
     });
 
     test('nested block map with comments (2)', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 a: 1
 b: 
   d: 4 # comment
@@ -336,7 +336,7 @@ b:
 # comment
 c: 3
 ''');
-      doc['b']['e'] = 6;
+      doc.setIn(['b', 'e'], 6);
 
       expect(doc.toString(), equals('''
 a: 1
@@ -350,7 +350,7 @@ c: 3
     });
 
     test('nested list', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - - 0
   - 1
@@ -358,7 +358,7 @@ c: 3
 - 2
 - 3
 ''');
-      doc[1][1] = 4;
+      doc.setIn([1, 1], 4);
       expect(doc.toString(), equals('''
 - 0
 - - 0
@@ -370,13 +370,13 @@ c: 3
     });
 
     test('nested list flow map -> scalar', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - {a: 1, b: 2}
 - 2
 - 3
 ''');
-      doc[1] = 4;
+      doc.setIn([1], 4);
       expect(doc.toString(), equals('''
 - 0
 - 4
@@ -386,7 +386,7 @@ c: 3
     });
 
     test('nested list-map-list-number update', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - a:
    - 1
@@ -395,7 +395,7 @@ c: 3
 - 2
 - 3
 ''');
-      doc[1]['a'][0] = 15;
+      doc.setIn([1, 'a', 0], 15);
       expect(doc.toString(), equals('''
 - 0
 - a:
@@ -408,15 +408,15 @@ c: 3
     });
   });
 
-  group('removeAt', () {
+  group('removeIn', () {
     test('simple block list ', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - 1
 - 2
 - 3
 ''');
-      doc.removeAt(1);
+      doc.removeIn([1]);
       expect(doc.toString(), equals('''
 - 0
 - 2
@@ -425,13 +425,13 @@ c: 3
     });
 
     test('simple block list (2)', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - [1,2,3]
 - 2
 - 3
 ''');
-      doc.removeAt(1);
+      doc.removeIn([1]);
       expect(doc.toString(), equals('''
 - 0
 - 2
@@ -440,13 +440,13 @@ c: 3
     });
 
     test('simple block list (3)', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - {a: 1, b: 2}
 - 2
 - 3
 ''');
-      doc.removeAt(1);
+      doc.removeIn([1]);
       expect(doc.toString(), equals('''
 - 0
 - 2
@@ -454,13 +454,13 @@ c: 3
 '''));
     });
     test('simple block list with comments', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - 1 # comments
 - 2
 - 3
 ''');
-      doc.removeAt(1);
+      doc.removeIn([1]);
       expect(doc.toString(), equals('''
 - 0
 - 2
@@ -469,93 +469,158 @@ c: 3
     });
 
     test('simple flow list', () {
-      var doc = ModifiableYAML('[1, 2, 3]');
-      doc.removeAt(1);
+      var doc = YamlEditBuilder('[1, 2, 3]');
+      doc.removeIn([1]);
       expect(doc.toString(), equals('[1, 3]'));
     });
 
     test('simple flow list (2)', () {
-      var doc = ModifiableYAML('[1, "b", "c"]');
-      doc.removeAt(1);
+      var doc = YamlEditBuilder('[1, "b", "c"]');
+      doc.removeIn([1]);
       expect(doc.toString(), equals('[1, "c"]'));
     });
 
     test('simple flow list (3)', () {
-      var doc = ModifiableYAML('[1, {a: 1}, "c"]');
-      doc.removeAt(1);
+      var doc = YamlEditBuilder('[1, {a: 1}, "c"]');
+      doc.removeIn([1]);
       expect(doc.toString(), equals('[1, "c"]'));
     });
   });
 
-  group('remove', () {
-    test('simple block list ', () {
-      var doc = ModifiableYAML('''
-- 0
-- 1
-- 2
-- 3
-''');
-      doc.remove(1);
-      expect(doc.toString(), equals('''
-- 0
-- 2
-- 3
-'''));
-    });
+//   group('remove', () {
+//     test('simple block list ', () {
+//       var doc = YamlEditBuilder('''
+// - 0
+// - 1
+// - 2
+// - 3
+// ''');
+//       doc.removeIn([1]);
+//       expect(doc.toString(), equals('''
+// - 0
+// - 2
+// - 3
+// '''));
+//     });
 
-    test('simple flow list ', () {
-      var doc = ModifiableYAML('[1, 2, 3]');
-      doc.remove(2);
-      expect(doc.toString(), equals('[1, 3]'));
-    });
+//     test('simple flow list ', () {
+//       var doc = YamlEditBuilder('[1, 2, 3]');
+//       doc.removeIn([2]);
+//       expect(doc.toString(), equals('[1, 3]'));
+//     });
 
-    test('simple flow list (2)', () {
-      var doc = ModifiableYAML('[1, 2, 3]');
-      doc.remove(3);
-      expect(doc.toString(), equals('[1, 2]'));
-    });
+//     test('simple flow list (2)', () {
+//       var doc = YamlEditBuilder('[1, 2, 3]');
+//       doc.removeIn([3]);
+//       expect(doc.toString(), equals('[1, 2]'));
+//     });
 
-    test('simple flow list (3)', () {
-      var doc = ModifiableYAML('[1, 2, 3]');
-      doc.remove(1);
-      expect(doc.toString(), equals('[ 2, 3]'));
-    });
+//     test('simple flow list (3)', () {
+//       var doc = YamlEditBuilder('[1, 2, 3]');
+//       doc.removeIn([1]);
+//       expect(doc.toString(), equals('[ 2, 3]'));
+//     });
 
-    test('simple flow list (4)', () {
-      var doc = ModifiableYAML('[1, 2, 3]');
-      doc.remove(4);
-      expect(doc.toString(), equals('[1, 2, 3]'));
-    });
+//     test('simple flow list (4)', () {
+//       var doc = YamlEditBuilder('[1, 2, 3]');
+//       doc.removeIn([4]);
+//       expect(doc.toString(), equals('[1, 2, 3]'));
+//     });
 
-    test('simple block map', () {
-      var doc = ModifiableYAML('''
+//     test('simple block map', () {
+//       var doc = YamlEditBuilder('''
+// a: 1
+// b: 2
+// c: 3
+// ''');
+//       doc.removeIn(['b']);
+//       expect(doc.toString(), equals('''
+// a: 1
+// c: 3
+// '''));
+//     });
+
+//     test('simple flow map ', () {
+//       var doc = YamlEditBuilder('{a: 1, b: 2, c: 3}');
+//       doc.removeIn(['b']);
+//       expect(doc.toString(), equals('{a: 1, c: 3}'));
+//     });
+//   });
+
+  group('set', () {
+    test('simple block map ', () {
+      var doc = YamlEditBuilder('''
 a: 1
 b: 2
 c: 3
 ''');
-      doc.remove('b');
+      doc.setIn(['d'], 4);
       expect(doc.toString(), equals('''
 a: 1
+b: 2
 c: 3
+d: 4
 '''));
     });
 
-    test('simple flow map ', () {
-      var doc = ModifiableYAML('{a: 1, b: 2, c: 3}');
-      doc.remove('b');
-      expect(doc.toString(), equals('{a: 1, c: 3}'));
+    test('simple block map with trailing newline', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 3
+
+
+''');
+      doc.setIn(['d'], 4);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 3
+d: 4
+
+
+'''));
+    });
+
+    test('nested block map', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 
+  d: 4
+''');
+      doc.setIn(['c', 'e'], 5);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 
+  d: 4
+  e: 5
+'''));
+    });
+
+    test('simple flow map', () {
+      var doc = YamlEditBuilder('{a: 1, b: 2}');
+      doc.setIn(['c'], 3);
+      expect(doc.toString(), equals('{a: 1, b: 2, c: 3}'));
+    });
+
+    test('empty flow map ', () {
+      var doc = YamlEditBuilder('{}');
+      doc.setIn(['a'], 1);
+      expect(doc.toString(), equals('{a: 1}'));
     });
   });
 
   group('add', () {
     test('simple block list ', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - 1
 - 2
 - 3
 ''');
-      doc.add(4);
+      doc.addIn([], 4);
       expect(doc.toString(), equals('''
 - 0
 - 1
@@ -566,13 +631,13 @@ c: 3
     });
 
     test('list to simple block list ', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - 1
 - 2
 - 3
 ''');
-      doc.add([4, 5, 6]);
+      doc.addIn([], [4, 5, 6]);
       expect(doc.toString(), equals('''
 - 0
 - 1
@@ -585,12 +650,12 @@ c: 3
     });
 
     test('nested block list ', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - - 1
   - 2
 ''');
-      doc[1].add(3);
+      doc.addIn([1], 3);
       expect(doc.toString(), equals('''
 - 0
 - - 1
@@ -600,12 +665,13 @@ c: 3
     });
 
     test('block list to nested block list ', () {
-      var doc = ModifiableYAML('''
+      var doc = YamlEditBuilder('''
 - 0
 - - 1
   - 2
 ''');
-      doc[1].add([3, 4, 5]);
+      doc.addIn([1], [3, 4, 5]);
+
       expect(doc.toString(), equals('''
 - 0
 - - 1
@@ -617,78 +683,15 @@ c: 3
     });
 
     test('simple flow list ', () {
-      var doc = ModifiableYAML('[0, 1, 2]');
-      doc.add(3);
+      var doc = YamlEditBuilder('[0, 1, 2]');
+      doc.addIn([], 3);
       expect(doc.toString(), equals('[0, 1, 2, 3]'));
     });
 
     test('empty flow list ', () {
-      var doc = ModifiableYAML('[]');
-      doc.add(0);
+      var doc = YamlEditBuilder('[]');
+      doc.addIn([], 0);
       expect(doc.toString(), equals('[0]'));
-    });
-
-    test('simple block map ', () {
-      var doc = ModifiableYAML('''
-a: 1
-b: 2
-c: 3
-''');
-      doc['d'] = 4;
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 3
-d: 4
-'''));
-    });
-
-    test('simple block map with trailing newline', () {
-      var doc = ModifiableYAML('''
-a: 1
-b: 2
-c: 3
-
-
-''');
-      doc['d'] = 4;
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 3
-d: 4
-
-
-'''));
-    });
-
-    test('nested block map', () {
-      var doc = ModifiableYAML('''
-a: 1
-b: 2
-c: 
-  d: 4
-''');
-      doc['c']['e'] = 5;
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 
-  d: 4
-  e: 5
-'''));
-    });
-
-    test('simple flow map', () {
-      var doc = ModifiableYAML('{a: 1, b: 2}');
-      doc['c'] = 3;
-      expect(doc.toString(), equals('{a: 1, b: 2, c: 3}'));
-    });
-
-    test('empty flow list ', () {
-      var doc = ModifiableYAML('{}');
-      doc['a'] = 1;
-      expect(doc.toString(), equals('{a: 1}'));
     });
   });
 }

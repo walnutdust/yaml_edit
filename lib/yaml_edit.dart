@@ -3,4 +3,4 @@
 /// More dartdocs go here.
 library yaml_edit;
 
-export 'src/edit_builder.dart';
+export 'src/mod.dart';

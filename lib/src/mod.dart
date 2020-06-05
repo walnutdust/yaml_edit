@@ -7,7 +7,7 @@ import 'package:yaml/yaml.dart';
 /// An interface for modifiable YAML documents which preserve Dart List and Map
 /// interfaces. Every time a modification takes place, the string is re-parsed,
 /// so users are guaranteed that calling toString() will result in valid YAML.
-class ModifiableYAML {
+class YamlEditBuilder {
   /// Original YAML string from which this instance is constructed.
   String yaml;
 
@@ -18,7 +18,7 @@ class ModifiableYAML {
 
   static const int DEFAULT_INDENTATION = 2;
 
-  ModifiableYAML(this.yaml) {
+  YamlEditBuilder(this.yaml) {
     var contents = loadYamlNode(yaml);
     _contents = _modifiedYamlNodeFrom(contents, this);
   }
@@ -26,15 +26,79 @@ class ModifiableYAML {
   @override
   String toString() => yaml;
 
-  dynamic operator [](key) => _contents[key];
-  operator []=(key, value) => _contents[key] = value;
+  /// Traverses down the provided [path] to the second-last node in the [path].
+  dynamic _getToBeforeLast(List<dynamic> path) {
+    var current = _contents;
+    // Traverse down the path list via indexes because we want to avoid the last
+    // key. We cannot use a for-in loop to check the value of the last element
+    // because it might be a primitive and repeated as a previous key.
+    for (var i = 0; i < path.length - 1; i++) {
+      current = current[path[i]];
+    }
 
-  dynamic remove(Object value) => _contents.remove(value);
-  dynamic removeAt(int index) => _contents.removeAt(index);
+    return current;
+  }
 
-  dynamic get value => _contents.value;
+  /// Gets the element represented by the [path].
+  dynamic _getElemInPath(List<dynamic> path) {
+    if (path.isEmpty) {
+      return _contents;
+    }
+    var current = _getToBeforeLast(path);
+    return current[path.last];
+  }
 
-  void add(Object value) => _contents.add(value);
+  /// Gets the value of the element represented by the [path]. If the element is
+  /// null, we return null.
+  dynamic getValueIn(List<dynamic> path) {
+    var elem = _getElemInPath(path);
+    if (elem == null) return null;
+    return elem.value;
+  }
+
+  /// Sets [value] in the [path]. If the [path] is not accessible (e.g. it currently
+  /// does not exist in the document), an error will be thrown.
+  void setIn(List<dynamic> path, value) {
+    var current = _getToBeforeLast(path);
+    var lastNode = path.last;
+    current[lastNode] = value;
+  }
+
+  /// Appends [value] into the given [path], only if the element at the given path
+  /// is a List.
+  void addIn(List<dynamic> path, value) {
+    var elem = _getElemInPath(path);
+    elem.add(value);
+  }
+
+  /// Removes the value in the path.
+  void removeIn(List<dynamic> path) {
+    var current = _getToBeforeLast(path);
+    var lastNode = path.last;
+
+    if (current is _ModifiableYamlList) {
+      current.removeAt(lastNode);
+    } else {
+      current.remove(lastNode);
+    }
+  }
+
+  /// Inserts [value] at the element given by the [path] if it doesn't exist,
+  /// updates it otherwise.
+  void upsertIn(List<dynamic> path, value) {
+    if (value is Map) {
+      var keys = value.keys.toList();
+      for (var key in keys) {
+        if (getValueIn(path) == null) {
+          setIn([...path], value);
+        } else {
+          upsertIn([...path, key], value[key]);
+        }
+      }
+    } else {
+      setIn(path, value);
+    }
+  }
 
   /// Utility method to insert [replacement] at [offset] on [yaml].
   void insert(int offset, String replacement) =>
@@ -64,20 +128,20 @@ class ModifiableYAML {
 
 /// An interface for modifiable YAML nodes from a YAML AST.
 /// On top of the [YamlNode] elements, [_ModifiableYamlNode] also
-/// has the base [ModifiableYAML] object so that we can imitate modifications.
+/// has the base [YamlEditBuilder] object so that we can imitate modifications.
 abstract class _ModifiableYamlNode extends YamlNode {
   SourceSpan _span;
 
   @override
   SourceSpan get span => _span;
 
-  ModifiableYAML _baseYaml;
+  YamlEditBuilder _baseYaml;
 }
 
 /// Creates a [_ModifiableYamlNode] from a [YamlNode]. Returns the original object
 /// if it is an instance of a [_ModifiableYamlNode].
 _ModifiableYamlNode _modifiedYamlNodeFrom(
-    YamlNode node, ModifiableYAML baseYaml) {
+    YamlNode node, YamlEditBuilder baseYaml) {
   switch (node.runtimeType) {
     case YamlList:
       return _ModifiableYamlList.from(node as YamlList, baseYaml);
@@ -103,7 +167,7 @@ class _ModifiableYamlScalar extends _ModifiableYamlNode {
   @override
   dynamic get value => _yamlScalar.value;
 
-  _ModifiableYamlScalar.from(this._yamlScalar, ModifiableYAML baseYaml) {
+  _ModifiableYamlScalar.from(this._yamlScalar, YamlEditBuilder baseYaml) {
     _span = _yamlScalar.span;
     _baseYaml = baseYaml;
   }
@@ -132,8 +196,8 @@ class _ModifiableYamlList extends _ModifiableYamlNode
 
   /// Initializes a [_ModifiableYamlList] from a [YamlList].
   ///
-  /// [baseYaml] is the base [ModifiableYAML] that [yamlList] is taken from.
-  _ModifiableYamlList.from(YamlList yamlList, ModifiableYAML baseYaml)
+  /// [baseYaml] is the base [YamlEditBuilder] that [yamlList] is taken from.
+  _ModifiableYamlList.from(YamlList yamlList, YamlEditBuilder baseYaml)
       : style = yamlList.style {
     _baseYaml = baseYaml;
     _span = yamlList.span;
@@ -254,12 +318,12 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// list is a block list.
   void _addToBlockList(dynamic elem) {
     var valueString =
-        getBlockString(elem, indentation + ModifiableYAML.DEFAULT_INDENTATION);
+        getBlockString(elem, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
     var formattedValue = ''.padLeft(indentation) + '- ';
 
     if (isCollection(elem)) {
       formattedValue += valueString
-              .substring(indentation + ModifiableYAML.DEFAULT_INDENTATION) +
+              .substring(indentation + YamlEditBuilder.DEFAULT_INDENTATION) +
           '\n';
     } else {
       formattedValue += valueString + '\n';
@@ -295,7 +359,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     return lastSpanOffset - lastNewLine - 1;
   }
 
-  _ModifiableYamlMap.from(YamlMap yamlMap, ModifiableYAML baseYaml)
+  _ModifiableYamlMap.from(YamlMap yamlMap, YamlEditBuilder baseYaml)
       : style = yamlMap.style {
     _span = yamlMap.span;
     _baseYaml = baseYaml;
@@ -365,7 +429,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   /// that it is a block Map.
   void _addToBlockMap(dynamic key, dynamic newValue) {
     var valueString = getBlockString(
-        newValue, indentation + ModifiableYAML.DEFAULT_INDENTATION);
+        newValue, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
     var formattedValue = ' ' * indentation + '$key: ';
     var offset = span.end.offset;
 
@@ -398,7 +462,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   void _replaceInBlockMap(dynamic key, dynamic newValue) {
     var value = nodes[key];
     var valueString = getBlockString(
-        newValue, indentation + ModifiableYAML.DEFAULT_INDENTATION);
+        newValue, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
     var start = getKeyNode(key).span.end.offset + 2;
     var end = _getContentSensitiveEnd(value);
 
@@ -471,7 +535,7 @@ String getBlockString(Object value, [int indentation = 0]) {
 
       return '$result\n' +
           getBlockString(
-              entry.value, indentation + ModifiableYAML.DEFAULT_INDENTATION);
+              entry.value, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
     }).join('\n');
   }
 
