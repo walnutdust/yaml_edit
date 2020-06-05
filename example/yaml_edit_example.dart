@@ -28,13 +28,5 @@ dev_dependencies:
   path: '>=1.2.0 <2.0.0'
   test: '>=0.12.0 <2.0.0'
 ''');
-  doc.upsertIn([
-    'dependencies'
-  ], {
-    'indent': '2.0.0',
-    'retry': {
-      'git': {'url': 'git://github.com/google/dart-neats', 'ref': 'master'}
-    }
-  });
   print(doc);
 }

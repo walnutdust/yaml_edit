@@ -1,4 +1,5 @@
 import 'dart:collection' as collection;
+import 'dart:convert';
 
 import 'package:source_span/source_span.dart';
 import 'package:yaml/src/equality.dart';
@@ -15,6 +16,10 @@ class YamlEditBuilder {
   /// Definitely a _ModifiableYamlNode, but dynamic allows us to implement both
   /// Map and List operations easily.
   dynamic _contents;
+
+  final List<SourceEdit> _edits = [];
+
+  List<SourceEdit> get edits => [..._edits];
 
   static const int DEFAULT_INDENTATION = 2;
 
@@ -58,7 +63,7 @@ class YamlEditBuilder {
 
   /// Sets [value] in the [path]. If the [path] is not accessible (e.g. it currently
   /// does not exist in the document), an error will be thrown.
-  void setIn(List<dynamic> path, value) {
+  void setIn(List<dynamic> path, dynamic value) {
     var current = _getToBeforeLast(path);
     var lastNode = path.last;
     current[lastNode] = value;
@@ -66,7 +71,7 @@ class YamlEditBuilder {
 
   /// Appends [value] into the given [path], only if the element at the given path
   /// is a List.
-  void addIn(List<dynamic> path, value) {
+  void addIn(List<dynamic> path, dynamic value) {
     var elem = _getElemInPath(path);
     elem.add(value);
   }
@@ -80,23 +85,6 @@ class YamlEditBuilder {
       current.removeAt(lastNode);
     } else {
       current.remove(lastNode);
-    }
-  }
-
-  /// Inserts [value] at the element given by the [path] if it doesn't exist,
-  /// updates it otherwise.
-  void upsertIn(List<dynamic> path, value) {
-    if (value is Map) {
-      var keys = value.keys.toList();
-      for (var key in keys) {
-        if (getValueIn(path) == null) {
-          setIn([...path], value);
-        } else {
-          upsertIn([...path, key], value[key]);
-        }
-      }
-    } else {
-      setIn(path, value);
     }
   }
 
@@ -123,6 +111,7 @@ class YamlEditBuilder {
     yaml = yaml.replaceRange(start, end, replacement);
     var contents = loadYamlNode(yaml);
     _contents = _modifiedYamlNodeFrom(contents, this);
+    _edits.add(SourceEdit(start, end - start, replacement));
   }
 }
 
@@ -230,7 +219,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   _ModifiableYamlNode operator [](int index) => nodes[index];
 
   @override
-  void operator []=(int index, newValue) {
+  void operator []=(int index, dynamic newValue) {
     var currValue = nodes[index];
 
     _baseYaml.replaceRangeFromSpan(currValue._span, newValue.toString());
@@ -371,10 +360,10 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   }
 
   @override
-  _ModifiableYamlNode operator [](key) => nodes[key];
+  _ModifiableYamlNode operator [](dynamic key) => nodes[key];
 
   @override
-  void operator []=(key, newValue) {
+  void operator []=(dynamic key, dynamic newValue) {
     if (!nodes.containsKey(key)) {
       if (style == CollectionStyle.FLOW) {
         _addToFlowMap(key, newValue);
@@ -556,3 +545,55 @@ int _getContentSensitiveEnd(_ModifiableYamlNode node) {
 
 /// Checks if the item is a Map or a List
 bool isCollection(Object item) => item is Map || item is List;
+
+/// A class representing a change on a String
+class SourceEdit {
+  final int offset;
+  final int length;
+  final String replacement;
+
+  SourceEdit(this.offset, this.length, this.replacement);
+
+  /// Constructs a SourceEdit from a json-encoded String.
+  factory SourceEdit.fromJson(String json) {
+    var jsonEdit = jsonDecode(json);
+
+    if (jsonEdit is Map) {
+      int offset;
+      if (jsonEdit.containsKey('offset') &&
+          jsonEdit.containsKey('length') &&
+          jsonEdit.containsKey('replacement')) {
+        offset = (jsonEdit['offset'] as int);
+      }
+      int length;
+      if (jsonEdit.containsKey('length')) {
+        length = (jsonEdit['length'] as int);
+      }
+      String replacement;
+      if (jsonEdit.containsKey('replacement')) {
+        replacement = (jsonEdit['length'] as String);
+      }
+      return SourceEdit(offset, length, replacement);
+    } else {
+      throw Exception('Invalid JSON passed to SourceEdit');
+    }
+  }
+
+  /// Encodes this object in JSON.
+  String toJSON() {
+    var map = {'offset': offset, 'length': length, 'replacement': replacement};
+
+    return jsonEncode(map);
+  }
+
+  /// Applies a series of [SourceEdit]s to an original string, and return the final output
+  static String apply(String original, List<SourceEdit> edits) {
+    var current = original;
+    for (var edit in edits) {
+      current = current.replaceRange(
+          edit.offset, edit.offset + edit.length, edit.replacement);
+    }
+
+    return current;
+  }
+}

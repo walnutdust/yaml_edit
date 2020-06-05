@@ -406,6 +406,69 @@ c: 3
 - 3
 '''));
     });
+
+    test('simple block map ', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 3
+''');
+      doc.setIn(['d'], 4);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 3
+d: 4
+'''));
+    });
+
+    test('simple block map with trailing newline', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 3
+
+
+''');
+      doc.setIn(['d'], 4);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 3
+d: 4
+
+
+'''));
+    });
+
+    test('nested block map', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 
+  d: 4
+''');
+      doc.setIn(['c', 'e'], 5);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 
+  d: 4
+  e: 5
+'''));
+    });
+
+    test('simple flow map', () {
+      var doc = YamlEditBuilder('{a: 1, b: 2}');
+      doc.setIn(['c'], 3);
+      expect(doc.toString(), equals('{a: 1, b: 2, c: 3}'));
+    });
+
+    test('empty flow map ', () {
+      var doc = YamlEditBuilder('{}');
+      doc.setIn(['a'], 1);
+      expect(doc.toString(), equals('{a: 1}'));
+    });
   });
 
   group('removeIn', () {
@@ -546,71 +609,6 @@ c: 3
 //       expect(doc.toString(), equals('{a: 1, c: 3}'));
 //     });
 //   });
-
-  group('set', () {
-    test('simple block map ', () {
-      var doc = YamlEditBuilder('''
-a: 1
-b: 2
-c: 3
-''');
-      doc.setIn(['d'], 4);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 3
-d: 4
-'''));
-    });
-
-    test('simple block map with trailing newline', () {
-      var doc = YamlEditBuilder('''
-a: 1
-b: 2
-c: 3
-
-
-''');
-      doc.setIn(['d'], 4);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 3
-d: 4
-
-
-'''));
-    });
-
-    test('nested block map', () {
-      var doc = YamlEditBuilder('''
-a: 1
-b: 2
-c: 
-  d: 4
-''');
-      doc.setIn(['c', 'e'], 5);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 
-  d: 4
-  e: 5
-'''));
-    });
-
-    test('simple flow map', () {
-      var doc = YamlEditBuilder('{a: 1, b: 2}');
-      doc.setIn(['c'], 3);
-      expect(doc.toString(), equals('{a: 1, b: 2, c: 3}'));
-    });
-
-    test('empty flow map ', () {
-      var doc = YamlEditBuilder('{}');
-      doc.setIn(['a'], 1);
-      expect(doc.toString(), equals('{a: 1}'));
-    });
-  });
 
   group('add', () {
     test('simple block list ', () {
