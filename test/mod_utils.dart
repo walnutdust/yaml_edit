@@ -7,3 +7,10 @@ void expectUnchangedYamlAfterLoading(String source) {
   var doc = YamlEditBuilder(source);
   expect(doc.toString(), equals(source));
 }
+
+/// Asserts that [builder] has the same internal value as [value].
+void expectYamlBuilderValue(YamlEditBuilder builder, dynamic value) {
+  var builderValue = builder.getValueIn([]);
+
+  expect(builderValue.toString(), equals(value.toString()));
+}
