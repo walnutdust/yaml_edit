@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:test/test.dart';
 import 'package:yaml_edit/src/mod.dart';
 
@@ -550,6 +553,8 @@ c:
     });
   });
 
+//  Remove was a method added on lists to remove elements by
+//  their value rather than their index.
 //   group('remove', () {
 //     test('simple block list ', () {
 //       var doc = YamlEditBuilder('''
@@ -691,5 +696,63 @@ c:
       doc.addIn([], 0);
       expect(doc.toString(), equals('[0]'));
     });
+  });
+
+  group('SourceEdit', () {
+    test('from JSON converts properly', () {
+      var sourceEditMap = {'offset': 1, 'length': 2, 'replacement': 'hi'};
+      var sourceEditJSON = jsonEncode(sourceEditMap);
+      var sourceEdit = SourceEdit.fromJson(sourceEditJSON);
+
+      expect(sourceEdit.offset, 1);
+      expect(sourceEdit.length, 2);
+      expect(sourceEdit.replacement, 'hi');
+    });
+
+    test('toJSON converts properly', () {
+      var sourceEdit = SourceEdit(1, 2, 'hi');
+      var sourceEditJSON = sourceEdit.toJSON();
+
+      expect(sourceEditJSON,
+          jsonEncode({'offset': 1, 'length': 2, 'replacement': 'hi'}));
+    });
+
+    group('apply', () {
+      test('returns original string when empty list is passed in', () {
+        var original = 'YAML: YAML';
+        var result = SourceEdit.apply(original, []);
+
+        expect(result, original);
+      });
+      test('works with list of one SourceEdit', () {
+        var original = 'YAML: YAML';
+        var sourceEdits = [SourceEdit(6, 4, 'YAML Ain\'t Markup Language')];
+
+        var result = SourceEdit.apply(original, sourceEdits);
+
+        expect(result, "YAML: YAML Ain't Markup Language");
+      });
+      test('works with list of multiple SourceEdits', () {
+        var original = 'YAML: YAML';
+        var sourceEdits = [
+          SourceEdit(6, 4, "YAML Ain't Markup Language"),
+          SourceEdit(6, 4, "YAML Ain't Markup Language"),
+          SourceEdit(0, 4, "YAML Ain't Markup Language")
+        ];
+
+        var result = SourceEdit.apply(original, sourceEdits);
+
+        expect(result,
+            "YAML Ain't Markup Language: YAML Ain't Markup Language Ain't Markup Language");
+      });
+    });
+
+    test('apply', () {});
+  });
+
+  group('YamlEditBuilder records edits', () {
+    test('after one change', () {});
+
+    test('after multiple changes', () {});
   });
 }

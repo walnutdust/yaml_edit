@@ -571,7 +571,7 @@ class SourceEdit {
       }
       String replacement;
       if (jsonEdit.containsKey('replacement')) {
-        replacement = (jsonEdit['length'] as String);
+        replacement = (jsonEdit['replacement'] as String);
       }
       return SourceEdit(offset, length, replacement);
     } else {
