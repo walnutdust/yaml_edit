@@ -163,6 +163,15 @@ class _ModifiableYamlScalar extends _ModifiableYamlNode {
 
   @override
   String toString() => _yamlScalar.value.toString();
+
+  @override
+  bool operator ==(dynamic other) {
+    if (other is _ModifiableYamlScalar) {
+      return value == other.value;
+    }
+
+    return value == other;
+  }
 }
 
 /// A wrapped list parsed from YAML, extended with methods to allow modification
@@ -182,6 +191,21 @@ class _ModifiableYamlList extends _ModifiableYamlNode
 
   @override
   List get value => this;
+
+  @override
+  bool operator ==(dynamic other) {
+    if (other is List) {
+      if (length != other.length) return false;
+
+      for (var i = 0; i < length; i++) {
+        if (this[i] != other[i]) return false;
+      }
+
+      return true;
+    }
+
+    return value == other;
+  }
 
   /// Initializes a [_ModifiableYamlList] from a [YamlList].
   ///
@@ -330,6 +354,25 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   Map<dynamic, _ModifiableYamlNode> nodes;
 
   final CollectionStyle style;
+
+  @override
+  bool operator ==(dynamic other) {
+    if (other is Map) {
+      if (length != other.length) return false;
+
+      var keyList = keys.toList();
+
+      for (var i = 0; i < length; i++) {
+        var key = keyList[i];
+
+        if (!other.containsKey(key) || this[key] != other[key]) return false;
+      }
+
+      return true;
+    }
+
+    return value == other;
+  }
 
   /// Gets the indentation level of the map. This is 0 if it is a flow map,
   /// but returns the number of spaces before the keys for block maps.
