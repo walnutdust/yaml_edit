@@ -21,9 +21,9 @@ class YamlEditBuilder {
 
   List<SourceEdit> get edits => [..._edits];
 
-  static const int DEFAULT_INDENTATION = 2;
+  int defaultIndentation;
 
-  YamlEditBuilder(this.yaml) {
+  YamlEditBuilder(this.yaml, {this.defaultIndentation = 2}) {
     var contents = loadYamlNode(yaml);
     _contents = _modifiedYamlNodeFrom(contents, this);
   }
@@ -307,13 +307,13 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// list is a block list.
   void _addToBlockList(dynamic elem) {
     var valueString =
-        getBlockString(elem, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
+        getBlockString(elem, indentation + _baseYaml.defaultIndentation);
     var formattedValue = ''.padLeft(indentation) + '- ';
 
     if (isCollection(elem)) {
-      formattedValue += valueString
-              .substring(indentation + YamlEditBuilder.DEFAULT_INDENTATION) +
-          '\n';
+      formattedValue +=
+          valueString.substring(indentation + _baseYaml.defaultIndentation) +
+              '\n';
     } else {
       formattedValue += valueString + '\n';
     }
@@ -417,8 +417,8 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   /// Adds the [key]:[newValue] pairing into the map, bearing in mind
   /// that it is a block Map.
   void _addToBlockMap(dynamic key, dynamic newValue) {
-    var valueString = getBlockString(
-        newValue, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
+    var valueString =
+        getBlockString(newValue, indentation + _baseYaml.defaultIndentation);
     var formattedValue = ' ' * indentation + '$key: ';
     var offset = span.end.offset;
 
@@ -454,8 +454,8 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   /// that it is a block Map.
   void _replaceInBlockMap(dynamic key, dynamic newValue) {
     var value = nodes[key];
-    var valueString = getBlockString(
-        newValue, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
+    var valueString =
+        getBlockString(newValue, indentation + _baseYaml.defaultIndentation);
     var start = getKeyNode(key).span.end.offset + 2;
     var end = _getContentSensitiveEnd(value);
 
@@ -520,7 +520,8 @@ String getFlowString(Object value) {
 /// Returns values as strings representing block objects.
 // We do a join('\n') rather than having it in the mapping to avoid
 // adding additional spaces when updating rather than adding elements.
-String getBlockString(Object value, [int indentation = 0]) {
+String getBlockString(Object value,
+    [int indentation = 0, int additionalIndentation = 2]) {
   if (value is List) {
     return value.map((e) => ' ' * indentation + '- $e').join('\n');
   } else if (value is Map) {
@@ -530,8 +531,7 @@ String getBlockString(Object value, [int indentation = 0]) {
       if (!isCollection(entry.value)) return result + ' ${entry.value}';
 
       return '$result\n' +
-          getBlockString(
-              entry.value, indentation + YamlEditBuilder.DEFAULT_INDENTATION);
+          getBlockString(entry.value, indentation + additionalIndentation);
     }).join('\n');
   }
 
