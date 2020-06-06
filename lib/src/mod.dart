@@ -427,7 +427,11 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
       var lastValueSpanEnd = nodes.values.last._span.end.offset;
       var nextNewLineIndex = _baseYaml.yaml.indexOf('\n', lastValueSpanEnd);
 
-      if (nextNewLineIndex != -1) offset = nextNewLineIndex + 1;
+      if (nextNewLineIndex != -1) {
+        offset = nextNewLineIndex + 1;
+      } else {
+        formattedValue = '\n' + formattedValue;
+      }
     }
 
     if (isCollection(newValue)) formattedValue += '\n';
@@ -492,6 +496,9 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     var valueSpan = valueNode.span;
     var start = _baseYaml.yaml.lastIndexOf('\n', keySpan.start.offset);
     var end = _baseYaml.yaml.indexOf('\n', valueSpan.end.offset);
+
+    if (start == -1) start = 0;
+    if (end == -1) end = _baseYaml.yaml.length - 1;
     _baseYaml._removeRange(start, end);
   }
 }
@@ -554,6 +561,13 @@ class SourceEdit {
 
   SourceEdit(this.offset, this.length, this.replacement);
 
+  @override
+  bool operator ==(other) {
+    return offset == other.offset &&
+        length == other.length &&
+        replacement == other.replacement;
+  }
+
   /// Constructs a SourceEdit from a json-encoded String.
   factory SourceEdit.fromJson(String json) {
     var jsonEdit = jsonDecode(json);
@@ -585,6 +599,9 @@ class SourceEdit {
 
     return jsonEncode(map);
   }
+
+  @override
+  String toString() => toJSON();
 
   /// Applies a series of [SourceEdit]s to an original string, and return the final output
   static String apply(String original, List<SourceEdit> edits) {

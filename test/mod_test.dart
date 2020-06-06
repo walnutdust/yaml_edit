@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:test/test.dart';
 import 'package:yaml_edit/src/mod.dart';
@@ -425,6 +424,25 @@ d: 4
 '''));
     });
 
+    test('simple block map (2)', () {
+      var doc = YamlEditBuilder('''
+a: 1
+''');
+      doc.setIn(['b'], 2);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+'''));
+    });
+
+    test('simple block map (3)', () {
+      var doc = YamlEditBuilder('a: 1');
+      doc.setIn(['b'], 2);
+      expect(doc.toString(), equals('''a: 1
+b: 2
+'''));
+    });
+
     test('simple block map with trailing newline', () {
       var doc = YamlEditBuilder('''
 a: 1
@@ -746,13 +764,34 @@ c:
             "YAML Ain't Markup Language: YAML Ain't Markup Language Ain't Markup Language");
       });
     });
-
-    test('apply', () {});
   });
 
   group('YamlEditBuilder records edits', () {
-    test('after one change', () {});
+    test('returns empty list at start', () {
+      var yamlEditBuilder = YamlEditBuilder('YAML: YAML');
 
-    test('after multiple changes', () {});
+      expect(yamlEditBuilder.edits, []);
+    });
+
+    test('after one change', () {
+      var yamlEditBuilder = YamlEditBuilder('YAML: YAML');
+      yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
+
+      expect(yamlEditBuilder.edits,
+          [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
+    });
+
+    test('after multiple changes', () {
+      var yamlEditBuilder = YamlEditBuilder('YAML: YAML');
+      yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
+      yamlEditBuilder.setIn(['XML'], 'Extensible Markup Language');
+      yamlEditBuilder.removeIn(['YAML']);
+
+      expect(yamlEditBuilder.edits, [
+        SourceEdit(6, 4, "YAML Ain't Markup Language"),
+        SourceEdit(32, 0, '\nXML: Extensible Markup Language\n'),
+        SourceEdit(0, 32, '')
+      ]);
+    });
   });
 }
