@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:source_span/source_span.dart';
 import 'package:yaml/src/equality.dart';
+import 'package:yaml/src/yaml_node_wrapper.dart';
 import 'package:yaml/yaml.dart';
 
 /// An interface for modifiable YAML documents which preserve Dart List and Map
@@ -110,7 +111,14 @@ class YamlEditBuilder {
   void _replaceRange(int start, int end, String replacement) {
     yaml = yaml.replaceRange(start, end, replacement);
     var contents = loadYamlNode(yaml);
-    _contents = _modifiedYamlNodeFrom(contents, this);
+    var modifiableContents = _modifiedYamlNodeFrom(contents, this);
+
+    if (_contents != modifiableContents) {
+      throw Exception(
+          'Modification did not result in expected result! Obtained: \n$modifiableContents\nExpected: \n$_contents');
+    }
+
+    _contents = modifiableContents;
     _edits.add(SourceEdit(start, end - start, replacement));
   }
 }
@@ -133,8 +141,10 @@ _ModifiableYamlNode _modifiedYamlNodeFrom(
     YamlNode node, YamlEditBuilder baseYaml) {
   switch (node.runtimeType) {
     case YamlList:
+    case YamlListWrapper:
       return _ModifiableYamlList.from(node as YamlList, baseYaml);
     case YamlMap:
+    case YamlMapWrapper:
       return _ModifiableYamlMap.from(node as YamlMap, baseYaml);
     case YamlScalar:
       return _ModifiableYamlScalar.from(node as YamlScalar, baseYaml);
@@ -146,6 +156,22 @@ _ModifiableYamlNode _modifiedYamlNodeFrom(
       throw UnsupportedError(
           'Cannot create ModifiableYamlNode from ${node.runtimeType}');
   }
+}
+
+/// Creates a dummy [_ModifiableYamlNode] from a value.
+_ModifiableYamlNode _dummyModifiableYamlNodeFrom(
+    dynamic value, YamlEditBuilder baseYaml) {
+  var yamlNode;
+
+  if (value is List) {
+    yamlNode = YamlList.wrap(value);
+  } else if (value is Map) {
+    yamlNode = YamlMap.wrap(value);
+  } else {
+    yamlNode = YamlScalar.wrap(value);
+  }
+
+  return _modifiedYamlNodeFrom(yamlNode, baseYaml);
 }
 
 /// A wrapped scalar parsed from YAML.
@@ -246,6 +272,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   void operator []=(int index, dynamic newValue) {
     var currValue = nodes[index];
 
+    nodes[index] = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
     _baseYaml.replaceRangeFromSpan(currValue._span, newValue.toString());
   }
 
@@ -256,7 +283,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     if (style == CollectionStyle.FLOW) {
       _removeFromFlowList(removedNode, index);
     } else {
-      _removeFromBlockList(removedNode);
+      _removeFromBlockList(removedNode, index);
     }
 
     return removedNode;
@@ -299,7 +326,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
 
   /// Performs the removal of [removedNode] from the base yaml, noting that
   /// the current list is a block list.
-  void _removeFromBlockList(_ModifiableYamlNode removedNode) {
+  void _removeFromBlockList(_ModifiableYamlNode removedNode, int index) {
     var span = removedNode._span;
     var start = _baseYaml.yaml.lastIndexOf('\n', span.start.offset);
     var end = _baseYaml.yaml.indexOf('\n', span.end.offset);
@@ -324,6 +351,8 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     var valueString = getFlowString(elem);
     if (nodes.isNotEmpty) valueString = ', ' + valueString;
 
+    var elemModifiableYAMLNode = _dummyModifiableYamlNodeFrom(elem, _baseYaml);
+    nodes.add(elemModifiableYAMLNode);
     _baseYaml.insert(span.end.offset - 1, valueString);
   }
 
@@ -341,6 +370,9 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     } else {
       formattedValue += valueString + '\n';
     }
+
+    var elemModifiableYAMLNode = _dummyModifiableYamlNodeFrom(elem, _baseYaml);
+    nodes.add(elemModifiableYAMLNode);
     _baseYaml._replaceRange(span.end.offset, span.end.offset, formattedValue);
   }
 }
@@ -356,16 +388,21 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   final CollectionStyle style;
 
   @override
+  String toString() => nodes.toString();
+
+  @override
   bool operator ==(dynamic other) {
     if (other is Map) {
       if (length != other.length) return false;
 
       var keyList = keys.toList();
-
       for (var i = 0; i < length; i++) {
         var key = keyList[i];
+        var keyNode = getKeyNode(key);
 
-        if (!other.containsKey(key) || this[key] != other[key]) return false;
+        if (!other.containsKey(key) || this[keyNode] != other[key]) {
+          return false;
+        }
       }
 
       return true;
@@ -434,6 +471,8 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     var keyNode = getKeyNode(key);
     var valueNode = nodes.remove(key);
 
+    nodes.remove(keyNode);
+
     if (style == CollectionStyle.FLOW) {
       _removeFromFlowMap(keyNode, valueNode, key);
     } else {
@@ -449,10 +488,14 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   /// Adds the [key]:[newValue] pairing into the map, bearing in mind
   /// that it is a flow Map.
   void _addToFlowMap(dynamic key, dynamic newValue) {
+    var keyNode = _dummyModifiableYamlNodeFrom(key, _baseYaml);
+    var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
     // The -1 accounts for the closing bracket.
     if (nodes.isEmpty) {
+      nodes[keyNode] = valueNode;
       _baseYaml.insert(span.end.offset - 1, '$key: $newValue');
     } else {
+      nodes[keyNode] = valueNode;
       _baseYaml.insert(span.end.offset - 1, ', $key: $newValue');
     }
   }
@@ -480,6 +523,10 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     if (isCollection(newValue)) formattedValue += '\n';
 
     formattedValue += valueString + '\n';
+
+    var keyNode = _dummyModifiableYamlNodeFrom(key, _baseYaml);
+    var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+    nodes[keyNode] = valueNode;
     _baseYaml.insert(offset, formattedValue);
   }
 
@@ -490,6 +537,9 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     var valueString = getFlowString(newValue);
 
     if (isCollection(newValue)) valueString = '\n' + valueString;
+
+    var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+    nodes[key] = valueNode;
     _baseYaml.replaceRangeFromSpan(valueSpan, valueString);
   }
 
@@ -504,11 +554,16 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
 
     if (isCollection(newValue)) valueString = '\n' + valueString;
 
+    var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+    nodes[key] = valueNode;
     _baseYaml._replaceRange(start, end, valueString);
   }
 
   @override
-  void clear() => _baseYaml.replaceRangeFromSpan(span, '');
+  void clear() {
+    nodes.clear();
+    _baseYaml.replaceRangeFromSpan(span, '');
+  }
 
   @override
   Iterable get keys => nodes.keys.map((node) => node.value);
