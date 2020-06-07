@@ -1,13 +1,9 @@
 name: yaml_edit
-description: A starting point for Dart libraries or applications.
-# version: 1.0.0
-# homepage: https://www.example.com
+description: A library for YAML manipulation.
+version: 0.0.1
 
 environment:
-  sdk: '>=2.8.1 <3.0.0'
-
-#dependencies:
-#  path: ^1.7.0
+  sdk: ">=2.4.0 <3.0.0"
 
 dev_dependencies:
   pedantic: ^1.9.0
