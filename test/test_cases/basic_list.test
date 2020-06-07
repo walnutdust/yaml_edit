@@ -1,0 +1,9 @@
+BASIC LIST TEST
+---
+- 0
+- 1
+- 2
+- 3
+---
+- [remove, [1]]
+- [add, [], 4]

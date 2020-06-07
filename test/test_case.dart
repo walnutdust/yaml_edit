@@ -111,6 +111,13 @@ class TestCase {
     switch (mod.method) {
       case YamlModificationMethod.setIn:
         yamlBuilder.setIn(mod.path, mod.value);
+        return;
+      case YamlModificationMethod.removeIn:
+        yamlBuilder.removeIn(mod.path);
+        return;
+      case YamlModificationMethod.addIn:
+        yamlBuilder.addIn(mod.path, mod.value);
+        return;
     }
   }
 
@@ -188,9 +195,16 @@ dynamic getValueFromYamlNode(YamlNode node) {
 /// [YamlModification] objects
 List<YamlModification> parseModifications(List<dynamic> modifications) {
   return modifications.map((mod) {
+    var path;
+    var value;
+
     var method = getModificationMethod((mod[0] as String));
-    var path = mod[1] as List;
-    var value = mod[2];
+    if (mod.length > 1) {
+      path = mod[1] as List;
+    }
+    if (mod.length > 2) {
+      value = mod[2];
+    }
 
     return YamlModification(method, path, value);
   }).toList();
@@ -200,7 +214,14 @@ List<YamlModification> parseModifications(List<dynamic> modifications) {
 YamlModificationMethod getModificationMethod(String method) {
   switch (method) {
     case 'set':
+    case 'setIn':
       return YamlModificationMethod.setIn;
+    case 'remove':
+    case 'removeIn':
+      return YamlModificationMethod.removeIn;
+    case 'add':
+    case 'addIn':
+      return YamlModificationMethod.addIn;
     default:
       throw Exception('$method not recognized!');
   }
@@ -219,4 +240,4 @@ class YamlModification {
 }
 
 /// Enum to hold the possible modification methods.
-enum YamlModificationMethod { setIn }
+enum YamlModificationMethod { addIn, setIn, removeIn }

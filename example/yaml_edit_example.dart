@@ -1,7 +1,7 @@
 import 'package:yaml_edit/yaml_edit.dart';
 
 void main() {
-  var doc = YamlEditBuilder('{}');
-  doc.setIn(['a'], 1);
-  print(doc);
+  var yamlEditBuilder = YamlEditBuilder('{YAML: YAML}');
+  yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
+  print(yamlEditBuilder);
 }

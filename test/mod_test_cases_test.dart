@@ -1,10 +1,6 @@
 import 'dart:io';
 
 import 'package:path/path.dart' show dirname;
-import 'package:test/test.dart';
-import 'package:yaml/yaml.dart';
-import 'package:yaml_edit/yaml_edit.dart';
-
 import './test_case.dart';
 
 /// This script performs snapshot testing of the inputs in the testing directory
@@ -15,7 +11,7 @@ import './test_case.dart';
 ///
 /// For more information on the expected input and output, refer to the README
 void main() async {
-  var scriptPath = dirname(Platform.script.path);
+  var scriptPath = getScriptPath();
   var testDirectory = Directory('$scriptPath/test_cases');
   var goldDirectory = Directory('$scriptPath/test_cases_golden');
 
@@ -27,4 +23,17 @@ void main() async {
       await TestCases.getTestCases(testDirectory.path, goldDirectory.path);
 
   testCases.test();
+}
+
+/// Helper method to return the directory of this file.
+String getScriptPath() {
+  var fullScriptPath = dirname(Platform.script.path);
+  var scriptPathBeginIndex = fullScriptPath.indexOf('file://');
+  if (scriptPathBeginIndex == -1) {
+    scriptPathBeginIndex = 0;
+  } else {
+    scriptPathBeginIndex += 'file://'.length;
+  }
+
+  return fullScriptPath.substring(scriptPathBeginIndex);
 }

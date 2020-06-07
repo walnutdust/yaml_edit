@@ -90,7 +90,7 @@ class YamlEditBuilder {
   }
 
   /// Utility method to insert [replacement] at [offset] on [yaml].
-  void insert(int offset, String replacement, void Function() change) =>
+  void _insert(int offset, String replacement, void Function() change) =>
       _replaceRange(offset, offset, replacement, change);
 
   /// Utility method to replace the substring in [yaml] as denoted by
@@ -355,7 +355,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     var valueString = getFlowString(elem);
     if (nodes.isNotEmpty) valueString = ', ' + valueString;
 
-    _baseYaml.insert(span.end.offset - 1, valueString, () {
+    _baseYaml._insert(span.end.offset - 1, valueString, () {
       var elemModifiableYAMLNode =
           _dummyModifiableYamlNodeFrom(elem, _baseYaml);
       nodes.add(elemModifiableYAMLNode);
@@ -375,6 +375,15 @@ class _ModifiableYamlList extends _ModifiableYamlNode
               '\n';
     } else {
       formattedValue += valueString + '\n';
+    }
+
+    // Adjusts offset to after the trailing newline of the last entry, if it exists
+    if (nodes.isNotEmpty) {
+      var lastValueSpanEnd = nodes.last._span.end.offset;
+      var nextNewLineIndex = _baseYaml.yaml.indexOf('\n', lastValueSpanEnd);
+      if (nextNewLineIndex == -1) {
+        formattedValue = '\n' + formattedValue;
+      }
     }
 
     _baseYaml._replaceRange(span.end.offset, span.end.offset, formattedValue,
@@ -499,12 +508,12 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
     // The -1 accounts for the closing bracket.
     if (nodes.isEmpty) {
-      _baseYaml.insert(span.end.offset - 1, '$key: $newValue', () {
+      _baseYaml._insert(span.end.offset - 1, '$key: $newValue', () {
         nodes[keyNode] = valueNode;
       });
     } else {
       nodes[keyNode] = valueNode;
-      _baseYaml.insert(span.end.offset - 1, ', $key: $newValue', () {
+      _baseYaml._insert(span.end.offset - 1, ', $key: $newValue', () {
         nodes[keyNode] = valueNode;
       });
     }
@@ -534,7 +543,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
 
     formattedValue += valueString + '\n';
 
-    _baseYaml.insert(offset, formattedValue, () {
+    _baseYaml._insert(offset, formattedValue, () {
       var keyNode = _dummyModifiableYamlNodeFrom(key, _baseYaml);
       var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
       nodes[keyNode] = valueNode;
