@@ -25,11 +25,9 @@ class TestCases {
       var testCasePaths = await testCasesPathStream.toList();
 
       testCaseList = testCasePaths.map((inputPath) {
-        var inputFileName = inputPath.split('/').last;
-        var goldenFileName =
-            inputFileName.substring(0, inputFileName.length - '.test'.length) +
-                '.golden';
-        var goldenPath = '$goldDirPath/$goldenFileName';
+        var inputName = inputPath.split('/').last;
+        var inputNameWithoutExt = inputName.substring(0, inputName.length - 5);
+        var goldenPath = '$goldDirPath/$inputNameWithoutExt.golden';
 
         return TestCase(inputPath, goldenPath);
       }).toList();
@@ -62,6 +60,7 @@ class TestCases {
   int get length => testCases.length;
 }
 
+/// Enum representing the different states of [TestCase]s.
 enum TestCaseStates { initialized, createdGoldenFile, testedGoldenFile }
 
 /// Interface for a golden test case. Handles the logic for test conduct/golden
@@ -86,15 +85,22 @@ class TestCase {
     initialize(inputFile);
   }
 
+  /// Initializes the [TestCase] by reading the corresponding [inputFile] and parsing
+  /// the different portions, and then running the input yaml against the specified
+  /// modifications.
+  ///
+  /// Precondition: [inputFile] must exist.
   void initialize(File inputFile) {
     var input = inputFile.readAsStringSync();
     var inputElements = input.split('\n---\n');
 
     info = inputElements[0];
     yamlBuilder = YamlEditBuilder(inputElements[1]);
-    modifications = parseModifications(
-        getValueFromYamlNode(loadYamlStream(inputElements[2])[0]));
+    var rawModifications = getValueFromYamlNode(loadYaml(inputElements[2]));
+    modifications = parseModifications(rawModifications);
 
+    /// Adds the initial state as well, so we can check that the simplest
+    /// parse -> immediately dump does not affect the string.
     states.add(yamlBuilder.toString());
 
     performModifications();

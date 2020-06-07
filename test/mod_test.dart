@@ -1,104 +1,49 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
-import 'package:yaml_edit/src/mod.dart';
+import 'package:yaml_edit/yaml_edit.dart';
 
 import 'mod_utils.dart';
 
 void main() {
   group('preserves original yaml: ', () {
-    test('number', () {
-      expectUnchangedYamlAfterLoading('2');
-    });
-
-    test('number with leading and trailing lines', () {
-      expectUnchangedYamlAfterLoading('''
+    test('number', expectLoadPreservesYAML('2'));
+    test('number with leading and trailing lines', expectLoadPreservesYAML('''
       
       2
       
-      ''');
-    });
-
-    test('octal numbers', () {
-      expectUnchangedYamlAfterLoading('0o14');
-    });
-
-    test('negative numbers', () {
-      expectUnchangedYamlAfterLoading('-345');
-    });
-
-    test('hexadecimal numbers', () {
-      expectUnchangedYamlAfterLoading('0x123abc');
-    });
-
-    test('floating point numbers', () {
-      expectUnchangedYamlAfterLoading('345.678');
-    });
-
-    test('exponential numbers', () {
-      expectUnchangedYamlAfterLoading('12.3015e+02');
-    });
-
-    test('string', () {
-      expectUnchangedYamlAfterLoading('a string');
-    });
-
-    test('string with control characters', () {
-      expectUnchangedYamlAfterLoading('a string \\n');
-    });
-
-    test('string with control characters', () {
-      expectUnchangedYamlAfterLoading('a string \n\r');
-    });
-
-    test('string with hex escapess', () {
-      expectUnchangedYamlAfterLoading('\\x0d\\x0a is \\r\\n');
-    });
-
-    test('flow map', () {
-      expectUnchangedYamlAfterLoading('{a: 2}');
-    });
-
-    test('flow list', () {
-      expectUnchangedYamlAfterLoading('[1, 2]');
-    });
-
-    test('flow list with different types of elements', () {
-      expectUnchangedYamlAfterLoading('[1, a]');
-    });
-
-    test('flow list with weird spaces', () {
-      expectUnchangedYamlAfterLoading('[ 1 ,      2]');
-    });
-
-    test('multiline string', () {
-      expectUnchangedYamlAfterLoading('''
+      '''));
+    test('octal numbers', expectLoadPreservesYAML('0o14'));
+    test('negative numbers', expectLoadPreservesYAML('-345'));
+    test('hexadecimal numbers', expectLoadPreservesYAML('0x123abc'));
+    test('floating point numbers', expectLoadPreservesYAML('345.678'));
+    test('exponential numbers', expectLoadPreservesYAML('12.3015e+02'));
+    test('string', expectLoadPreservesYAML('a string'));
+    test('string with control characters',
+        expectLoadPreservesYAML('a string \\n'));
+    test('string with control characters',
+        expectLoadPreservesYAML('a string \n\r'));
+    test('string with hex escapes',
+        expectLoadPreservesYAML('\\x0d\\x0a is \\r\\n'));
+    test('flow map', expectLoadPreservesYAML('{a: 2}'));
+    test('flow list', expectLoadPreservesYAML('[1, 2]'));
+    test('flow list with different types of elements',
+        expectLoadPreservesYAML('[1, a]'));
+    test('flow list with weird spaces',
+        expectLoadPreservesYAML('[ 1 ,      2]'));
+    test('multiline string', expectLoadPreservesYAML('''
       Mark set a major league
-      home run record in 1998.''');
-    });
-
-    test('tilde', () {
-      expectUnchangedYamlAfterLoading('~');
-    });
-
-    test('false', () {
-      expectUnchangedYamlAfterLoading('false');
-    });
-
-    test('block map', () {
-      expectUnchangedYamlAfterLoading('''a: 
+      home run record in 1998.'''));
+    test('tilde', expectLoadPreservesYAML('~'));
+    test('false', expectLoadPreservesYAML('false'));
+    test('block map', expectLoadPreservesYAML('''a: 
     b: 1
-    ''');
-    });
-
-    test('block list', () {
-      expectUnchangedYamlAfterLoading('''a: 
+    '''));
+    test('block list', expectLoadPreservesYAML('''a: 
     - 1
-    ''');
-    });
-
+    '''));
     test('complicated example', () {
-      expectUnchangedYamlAfterLoading('''verb: RecommendCafes
+      expectLoadPreservesYAML('''verb: RecommendCafes
 map:
   a: 
     b: 1
@@ -112,7 +57,7 @@ recipe:
     });
   });
 
-  group('updates', () {
+  group('setIn', () {
     test('simple block map', () {
       var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
       doc.setIn(['YAML'], 'hi');
@@ -127,6 +72,63 @@ recipe:
 
       expect(doc.toString(), equals('YAML: hi # comment'));
       expectYamlBuilderValue(doc, {'YAML': 'hi'});
+    });
+
+    test('simple block map ', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 3
+''');
+      doc.setIn(['d'], 4);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 3
+d: 4
+'''));
+      expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
+    });
+
+    test('simple block map (2)', () {
+      var doc = YamlEditBuilder('''
+a: 1
+''');
+      doc.setIn(['b'], 2);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+'''));
+      expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
+    });
+
+    test('simple block map (3)', () {
+      var doc = YamlEditBuilder('a: 1');
+      doc.setIn(['b'], 2);
+      expect(doc.toString(), equals('''a: 1
+b: 2
+'''));
+      expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
+    });
+
+    test('simple block map with trailing newline', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 3
+
+
+''');
+      doc.setIn(['d'], 4);
+      expect(doc.toString(), equals('''
+a: 1
+b: 2
+c: 3
+d: 4
+
+
+'''));
+      expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
     });
 
     test('simple flow map', () {
@@ -159,6 +161,16 @@ recipe:
         'XML': 'XML Markup Language',
         'HTML': 'Hypertext Markup Language'
       });
+    });
+
+    test('throw RangeError in list if index is negative', () {
+      var doc = YamlEditBuilder("- YAML Ain't Markup Language");
+      expect(() => doc.setIn([-1], 'hi'), throwsRangeError);
+    });
+
+    test('throw RangeError in list if index is larger than list length', () {
+      var doc = YamlEditBuilder("- YAML Ain't Markup Language");
+      expect(() => doc.setIn([2], 'hi'), throwsRangeError);
     });
 
     test('simple block list', () {
@@ -482,92 +494,6 @@ c: 3
       ]);
     });
 
-    test('simple block map ', () {
-      var doc = YamlEditBuilder('''
-a: 1
-b: 2
-c: 3
-''');
-      doc.setIn(['d'], 4);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 3
-d: 4
-'''));
-      expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
-    });
-
-    test('simple block map (2)', () {
-      var doc = YamlEditBuilder('''
-a: 1
-''');
-      doc.setIn(['b'], 2);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-'''));
-      expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
-    });
-
-    test('simple block map (3)', () {
-      var doc = YamlEditBuilder('a: 1');
-      doc.setIn(['b'], 2);
-      expect(doc.toString(), equals('''a: 1
-b: 2
-'''));
-      expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
-    });
-
-    test('simple block map with trailing newline', () {
-      var doc = YamlEditBuilder('''
-a: 1
-b: 2
-c: 3
-
-
-''');
-      doc.setIn(['d'], 4);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 3
-d: 4
-
-
-'''));
-      expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
-    });
-
-    test('nested block map', () {
-      var doc = YamlEditBuilder('''
-a: 1
-b: 2
-c: 
-  d: 4
-''');
-      doc.setIn(['c', 'e'], 5);
-      expect(doc.toString(), equals('''
-a: 1
-b: 2
-c: 
-  d: 4
-  e: 5
-'''));
-      expectYamlBuilderValue(doc, {
-        'a': 1,
-        'b': 2,
-        'c': {'d': 4, 'e': 5}
-      });
-    });
-
-    test('simple flow map', () {
-      var doc = YamlEditBuilder('{a: 1, b: 2}');
-      doc.setIn(['c'], 3);
-      expect(doc.toString(), equals('{a: 1, b: 2, c: 3}'));
-      expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3});
-    });
-
     test('empty flow map ', () {
       var doc = YamlEditBuilder('{}');
       doc.setIn(['a'], 1);
@@ -577,6 +503,48 @@ c:
   });
 
   group('removeIn', () {
+    test('simple block map', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 2
+c: 3
+''');
+      doc.removeIn(['b']);
+      expect(doc.toString(), equals('''
+a: 1
+c: 3
+'''));
+    });
+
+    test('nested block map', () {
+      var doc = YamlEditBuilder('''
+a: 1
+b: 
+  d: 4
+  e: 5
+c: 3
+''');
+      doc.removeIn(['b', 'd']);
+      expect(doc.toString(), equals('''
+a: 1
+b: 
+  e: 5
+c: 3
+'''));
+    });
+
+    test('simple flow map ', () {
+      var doc = YamlEditBuilder('{a: 1, b: 2, c: 3}');
+      doc.removeIn(['b']);
+      expect(doc.toString(), equals('{a: 1, c: 3}'));
+    });
+
+    test('nested flow map ', () {
+      var doc = YamlEditBuilder('{a: 1, b: {d: 4, e: 5}, c: 3}');
+      doc.removeIn(['b', 'd']);
+      expect(doc.toString(), equals('{a: 1, b: { e: 5}, c: 3}'));
+    });
+
     test('simple block list ', () {
       var doc = YamlEditBuilder('''
 - 0
@@ -662,7 +630,7 @@ c:
     });
   });
 
-  group('add', () {
+  group('addInList', () {
     test('simple block list ', () {
       var doc = YamlEditBuilder('''
 - 0

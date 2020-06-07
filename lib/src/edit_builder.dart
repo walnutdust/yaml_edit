@@ -10,6 +10,9 @@ import 'package:yaml/yaml.dart';
 /// interfaces. Every time a modification takes place, the string is re-parsed,
 /// so users are guaranteed that calling toString() will result in valid YAML.
 class YamlEditBuilder {
+  final List<SourceEdit> _edits = [];
+  List<SourceEdit> get edits => [..._edits];
+
   /// Original YAML string from which this instance is constructed.
   String yaml;
 
@@ -18,13 +21,9 @@ class YamlEditBuilder {
   /// Map and List operations easily.
   dynamic _contents;
 
-  final List<SourceEdit> _edits = [];
+  int indentationStep;
 
-  List<SourceEdit> get edits => [..._edits];
-
-  int defaultIndentation;
-
-  YamlEditBuilder(this.yaml, {this.defaultIndentation = 2}) {
+  YamlEditBuilder(this.yaml, {this.indentationStep = 2}) {
     var contents = loadYamlNode(yaml);
     _contents = _modifiedYamlNodeFrom(contents, this);
   }
@@ -340,9 +339,11 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   @override
   void insert(int index, dynamic elem) {
     if (index > length || index < 0) {
-      throw Exception('Invalid index $index provided to insert.');
+      throw RangeError.range(index, 0, length);
     }
 
+    /// We call the add method if the user wants to add it to the end of the list
+    /// because appending requires different techniques.
     if (index == length) {
       add(elem);
     } else {
@@ -408,13 +409,12 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// list is a block list.
   void _prependToBlockList(dynamic elem) {
     var valueString =
-        getBlockString(elem, indentation + _baseYaml.defaultIndentation);
+        getBlockString(elem, indentation + _baseYaml.indentationStep);
     var formattedValue = ''.padLeft(indentation) + '- ';
 
     if (isCollection(elem)) {
       formattedValue +=
-          valueString.substring(indentation + _baseYaml.defaultIndentation) +
-              '\n';
+          valueString.substring(indentation + _baseYaml.indentationStep) + '\n';
     } else {
       formattedValue += valueString + '\n';
     }
@@ -432,7 +432,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// to [length].
   void _insertInFlowList(int index, dynamic elem) {
     if (index < 0 || index > length) {
-      throw Exception('Invalid index $index provided!');
+      throw RangeError.range(index, 0, length);
     }
     if (index == length) return _addToFlowList(elem);
     if (index == 0) return _prependToFlowList(elem);
@@ -456,19 +456,18 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// to [length].
   void _insertInBlockList(int index, dynamic elem) {
     if (index < 0 || index > length) {
-      throw Exception('Invalid index $index provided!');
+      throw RangeError.range(index, 0, length);
     }
     if (index == length) return _addToBlockList(elem);
     if (index == 0) return _prependToBlockList(elem);
 
     var valueString =
-        getBlockString(elem, indentation + _baseYaml.defaultIndentation);
+        getBlockString(elem, indentation + _baseYaml.indentationStep);
     var formattedValue = ''.padLeft(indentation) + '- ';
 
     if (isCollection(elem)) {
       formattedValue +=
-          valueString.substring(indentation + _baseYaml.defaultIndentation) +
-              '\n';
+          valueString.substring(indentation + _baseYaml.indentationStep) + '\n';
     } else {
       formattedValue += valueString + '\n';
     }
@@ -499,13 +498,12 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// list is a block list.
   void _addToBlockList(dynamic elem) {
     var valueString =
-        getBlockString(elem, indentation + _baseYaml.defaultIndentation);
+        getBlockString(elem, indentation + _baseYaml.indentationStep);
     var formattedValue = ''.padLeft(indentation) + '- ';
 
     if (isCollection(elem)) {
       formattedValue +=
-          valueString.substring(indentation + _baseYaml.defaultIndentation) +
-              '\n';
+          valueString.substring(indentation + _baseYaml.indentationStep) + '\n';
     } else {
       formattedValue += valueString + '\n';
     }
@@ -618,7 +616,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     if (!nodes.containsKey(key)) return null;
 
     var keyNode = getKeyNode(key);
-    var valueNode = nodes.remove(key);
+    var valueNode = nodes[key];
 
     if (style == CollectionStyle.FLOW) {
       _removeFromFlowMap(keyNode, valueNode, key);
@@ -654,7 +652,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   /// that it is a block Map.
   void _addToBlockMap(dynamic key, dynamic newValue) {
     var valueString =
-        getBlockString(newValue, indentation + _baseYaml.defaultIndentation);
+        getBlockString(newValue, indentation + _baseYaml.indentationStep);
     var formattedValue = ' ' * indentation + '$key: ';
     var offset = span.end.offset;
 
@@ -700,7 +698,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   void _replaceInBlockMap(dynamic key, dynamic newValue) {
     var value = nodes[key];
     var valueString =
-        getBlockString(newValue, indentation + _baseYaml.defaultIndentation);
+        getBlockString(newValue, indentation + _baseYaml.indentationStep);
     var start = getKeyNode(key).span.end.offset + 2;
     var end = _getContentSensitiveEnd(value);
 
