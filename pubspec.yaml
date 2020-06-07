@@ -1,6 +1,6 @@
 name: yaml_edit
 description: A library for YAML manipulation.
-version: 0.0.1
+version: 1.0.0
 
 environment:
   sdk: ">=2.4.0 <3.0.0"

@@ -662,68 +662,6 @@ c:
     });
   });
 
-//  Remove was a method added on lists to remove elements by
-//  their value rather than their index.
-//   group('remove', () {
-//     test('simple block list ', () {
-//       var doc = YamlEditBuilder('''
-// - 0
-// - 1
-// - 2
-// - 3
-// ''');
-//       doc.removeIn([1]);
-//       expect(doc.toString(), equals('''
-// - 0
-// - 2
-// - 3
-// '''));
-//     });
-
-//     test('simple flow list ', () {
-//       var doc = YamlEditBuilder('[1, 2, 3]');
-//       doc.removeIn([2]);
-//       expect(doc.toString(), equals('[1, 3]'));
-//     });
-
-//     test('simple flow list (2)', () {
-//       var doc = YamlEditBuilder('[1, 2, 3]');
-//       doc.removeIn([3]);
-//       expect(doc.toString(), equals('[1, 2]'));
-//     });
-
-//     test('simple flow list (3)', () {
-//       var doc = YamlEditBuilder('[1, 2, 3]');
-//       doc.removeIn([1]);
-//       expect(doc.toString(), equals('[ 2, 3]'));
-//     });
-
-//     test('simple flow list (4)', () {
-//       var doc = YamlEditBuilder('[1, 2, 3]');
-//       doc.removeIn([4]);
-//       expect(doc.toString(), equals('[1, 2, 3]'));
-//     });
-
-//     test('simple block map', () {
-//       var doc = YamlEditBuilder('''
-// a: 1
-// b: 2
-// c: 3
-// ''');
-//       doc.removeIn(['b']);
-//       expect(doc.toString(), equals('''
-// a: 1
-// c: 3
-// '''));
-//     });
-
-//     test('simple flow map ', () {
-//       var doc = YamlEditBuilder('{a: 1, b: 2, c: 3}');
-//       doc.removeIn(['b']);
-//       expect(doc.toString(), equals('{a: 1, c: 3}'));
-//     });
-//   });
-
   group('add', () {
     test('simple block list ', () {
       var doc = YamlEditBuilder('''
@@ -732,7 +670,7 @@ c:
 - 2
 - 3
 ''');
-      doc.addIn([], 4);
+      doc.addInList([], 4);
       expect(doc.toString(), equals('''
 - 0
 - 1
@@ -750,7 +688,7 @@ c:
 - 2
 - 3
 ''');
-      doc.addIn([], [4, 5, 6]);
+      doc.addInList([], [4, 5, 6]);
       expect(doc.toString(), equals('''
 - 0
 - 1
@@ -775,7 +713,7 @@ c:
 - - 1
   - 2
 ''');
-      doc.addIn([1], 3);
+      doc.addInList([1], 3);
       expect(doc.toString(), equals('''
 - 0
 - - 1
@@ -794,7 +732,7 @@ c:
 - - 1
   - 2
 ''');
-      doc.addIn([1], [3, 4, 5]);
+      doc.addInList([1], [3, 4, 5]);
 
       expect(doc.toString(), equals('''
 - 0
@@ -816,16 +754,181 @@ c:
 
     test('simple flow list ', () {
       var doc = YamlEditBuilder('[0, 1, 2]');
-      doc.addIn([], 3);
+      doc.addInList([], 3);
       expect(doc.toString(), equals('[0, 1, 2, 3]'));
       expectYamlBuilderValue(doc, [0, 1, 2, 3]);
     });
 
     test('empty flow list ', () {
       var doc = YamlEditBuilder('[]');
-      doc.addIn([], 0);
+      doc.addInList([], 0);
       expect(doc.toString(), equals('[0]'));
       expectYamlBuilderValue(doc, [0]);
+    });
+  });
+
+  group('prependInList', () {
+    test('simple flow list', () {
+      var doc = YamlEditBuilder('[1, 2]');
+      doc.prependInList([], 0);
+      expect(doc.toString(), equals('[0, 1, 2]'));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple flow list with spaces', () {
+      var doc = YamlEditBuilder('[ 1 , 2 ]');
+      doc.prependInList([], 0);
+      expect(doc.toString(), equals('[0,  1 , 2 ]'));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple block list', () {
+      var doc = YamlEditBuilder('''
+- 1
+- 2''');
+      doc.prependInList([], 0);
+      expect(doc.toString(), equals('''
+- 0
+- 1
+- 2'''));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple block list (2)', () {
+      var doc = YamlEditBuilder('''- 1
+- 2''');
+      doc.prependInList([], 0);
+      expect(doc.toString(), equals('''- 0
+- 1
+- 2'''));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple block list (3)', () {
+      var doc = YamlEditBuilder('''
+- 1
+- 2
+''');
+      doc.prependInList([], 0);
+      expect(doc.toString(), equals('''
+- 0
+- 1
+- 2
+'''));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple block list with comments ', () {
+      var doc = YamlEditBuilder('''
+# comments
+- 1 # comments
+- 2
+''');
+      doc.prependInList([], 0);
+      expect(doc.toString(), equals('''
+# comments
+- 0
+- 1 # comments
+- 2
+'''));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('block list nested in map', () {
+      var doc = YamlEditBuilder('''
+a:
+  - 1
+  - 2
+''');
+      doc.prependInList(['a'], 0);
+      expect(doc.toString(), equals('''
+a:
+  - 0
+  - 1
+  - 2
+'''));
+      expectYamlBuilderValue(doc, {
+        'a': [0, 1, 2]
+      });
+    });
+
+    test('block list nested in map with comments ', () {
+      var doc = YamlEditBuilder('''
+a: # comments
+  - 1 # comments
+  - 2
+''');
+      doc.prependInList(['a'], 0);
+      expect(doc.toString(), equals('''
+a: # comments
+  - 0
+  - 1 # comments
+  - 2
+'''));
+      expectYamlBuilderValue(doc, {
+        'a': [0, 1, 2]
+      });
+    });
+  });
+
+  group('insertInList', () {
+    test('simple flow list', () {
+      var doc = YamlEditBuilder('[1, 2]');
+      doc.insertInList([], 0, 0);
+      expect(doc.toString(), equals('[0, 1, 2]'));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple flow list (2)', () {
+      var doc = YamlEditBuilder('[1, 2]');
+      doc.insertInList([], 1, 3);
+      expect(doc.toString(), equals('[1, 3, 2]'));
+      expectYamlBuilderValue(doc, [1, 3, 2]);
+    });
+
+    test('simple flow list (3)', () {
+      var doc = YamlEditBuilder('[1, 2]');
+      doc.insertInList([], 2, 3);
+      expect(doc.toString(), equals('[1, 2, 3]'));
+      expectYamlBuilderValue(doc, [1, 2, 3]);
+    });
+
+    test('simple block list', () {
+      var doc = YamlEditBuilder('''
+- 1
+- 2''');
+      doc.insertInList([], 0, 0);
+      expect(doc.toString(), equals('''
+- 0
+- 1
+- 2'''));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+
+    test('simple block list (2)', () {
+      var doc = YamlEditBuilder('''
+- 1
+- 2''');
+      doc.insertInList([], 1, 3);
+      expect(doc.toString(), equals('''
+- 1
+- 3
+- 2'''));
+      expectYamlBuilderValue(doc, [1, 3, 2]);
+    });
+
+    test('simple block list (3)', () {
+      var doc = YamlEditBuilder('''
+- 1
+- 2
+''');
+      doc.insertInList([], 2, 3);
+      expect(doc.toString(), equals('''
+- 1
+- 2
+- 3
+'''));
+      expectYamlBuilderValue(doc, [1, 2, 3]);
     });
   });
 

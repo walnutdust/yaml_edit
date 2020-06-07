@@ -116,7 +116,7 @@ class TestCase {
         yamlBuilder.removeIn(mod.path);
         return;
       case YamlModificationMethod.addIn:
-        yamlBuilder.addIn(mod.path, mod.value);
+        yamlBuilder.addInList(mod.path, mod.value);
         return;
     }
   }

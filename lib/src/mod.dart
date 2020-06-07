@@ -56,7 +56,7 @@ class YamlEditBuilder {
 
   /// Gets the value of the element represented by the [path]. If the element is
   /// null, we return null.
-  dynamic getValueIn(List<dynamic> path) {
+  dynamic getIn(List<dynamic> path) {
     var elem = _getElemInPath(path);
     if (elem == null) return null;
     return elem.value;
@@ -70,11 +70,25 @@ class YamlEditBuilder {
     current[lastNode] = value;
   }
 
-  /// Appends [value] into the given [path], only if the element at the given path
+  /// Appends [value] into the list at [listPath], only if the element at the given path
   /// is a List.
-  void addIn(List<dynamic> path, dynamic value) {
-    var elem = _getElemInPath(path);
+  void addInList(List<dynamic> listPath, dynamic value) {
+    var elem = _getElemInPath(listPath);
     elem.add(value);
+  }
+
+  /// Prepends [value] into the list at [listPath], only if the element at the given path
+  /// is a List.
+  void prependInList(List<dynamic> listPath, dynamic value) {
+    var elem = _getElemInPath(listPath);
+    elem.prepend(value);
+  }
+
+  /// Inserts [value] into the list at [listPath], only if the element at the given path
+  /// is a list. [index] must be non-negative and no greater than the list's length.
+  void insertInList(List<dynamic> listPath, int index, dynamic value) {
+    var elem = _getElemInPath(listPath);
+    elem.insert(index, value);
   }
 
   /// Removes the value in the path.
@@ -163,7 +177,7 @@ _ModifiableYamlNode _modifiedYamlNodeFrom(
 }
 
 /// Creates a dummy [_ModifiableYamlNode] from a value.
-_ModifiableYamlNode _dummyModifiableYamlNodeFrom(
+_ModifiableYamlNode _dummyMYamlNodeFrom(
     dynamic value, YamlEditBuilder baseYaml) {
   var yamlNode;
 
@@ -234,7 +248,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
       return true;
     }
 
-    return value == other;
+    return false;
   }
 
   /// Initializes a [_ModifiableYamlList] from a [YamlList].
@@ -276,7 +290,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   void operator []=(int index, dynamic newValue) {
     var currValue = nodes[index];
     _baseYaml.replaceRangeFromSpan(currValue._span, newValue.toString(), () {
-      nodes[index] = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+      nodes[index] = _dummyMYamlNodeFrom(newValue, _baseYaml);
     });
   }
 
@@ -302,12 +316,41 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     return true;
   }
 
+  /// Adds [elem] to the end of the list.
   @override
   void add(dynamic elem) {
     if (style == CollectionStyle.FLOW) {
       _addToFlowList(elem);
     } else {
       _addToBlockList(elem);
+    }
+  }
+
+  /// Adds [elem] to the start of the list.
+  void prepend(dynamic elem) {
+    if (style == CollectionStyle.FLOW) {
+      _prependToFlowList(elem);
+    } else {
+      _prependToBlockList(elem);
+    }
+  }
+
+  /// Adds [elem] to the list at [index]. [index] should be non-negative and
+  /// no more than [length].
+  @override
+  void insert(int index, dynamic elem) {
+    if (index > length || index < 0) {
+      throw Exception('Invalid index $index provided to insert.');
+    }
+
+    if (index == length) {
+      add(elem);
+    } else {
+      if (style == CollectionStyle.FLOW) {
+        _insertInFlowList(index, elem);
+      } else {
+        _insertInBlockList(index, elem);
+      }
     }
   }
 
@@ -341,12 +384,103 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   /// elements by the values rather than requiring them to construct
   /// [_ModifiableYamlNode]s
   @override
-  int indexOf(Object element, [int start = 0]) {
+  int indexOf(dynamic element, [int start = 0]) {
     if (start < 0) start = 0;
     for (var i = start; i < length; i++) {
       if (deepEquals(this[i].value, element)) return i;
     }
     return -1;
+  }
+
+  /// Performs the prepending of [elem] into the base yaml, noting that the current
+  /// list is a flow list.
+  void _prependToFlowList(dynamic elem) {
+    var valueString = getFlowString(elem);
+    if (nodes.isNotEmpty) valueString = '$valueString, ';
+
+    _baseYaml._insert(span.start.offset + 1, valueString, () {
+      var elemModifiableYAMLNode = _dummyMYamlNodeFrom(elem, _baseYaml);
+      nodes.insert(0, elemModifiableYAMLNode);
+    });
+  }
+
+  /// Performs the prepending of [elem] into the base yaml, noting that the current
+  /// list is a block list.
+  void _prependToBlockList(dynamic elem) {
+    var valueString =
+        getBlockString(elem, indentation + _baseYaml.defaultIndentation);
+    var formattedValue = ''.padLeft(indentation) + '- ';
+
+    if (isCollection(elem)) {
+      formattedValue +=
+          valueString.substring(indentation + _baseYaml.defaultIndentation) +
+              '\n';
+    } else {
+      formattedValue += valueString + '\n';
+    }
+
+    var startOffset = _baseYaml.yaml.lastIndexOf('\n', span.start.offset) + 1;
+
+    _baseYaml._insert(startOffset, formattedValue, () {
+      var elemModifiableYAMLNode = _dummyMYamlNodeFrom(elem, _baseYaml);
+      nodes.insert(0, elemModifiableYAMLNode);
+    });
+  }
+
+  /// Performs the prepending of [elem] into the base yaml, noting that the current
+  /// list is a flow list. [index] should be non-negative and less than or equal
+  /// to [length].
+  void _insertInFlowList(int index, dynamic elem) {
+    if (index < 0 || index > length) {
+      throw Exception('Invalid index $index provided!');
+    }
+    if (index == length) return _addToFlowList(elem);
+    if (index == 0) return _prependToFlowList(elem);
+
+    var valueString = ' ' + getFlowString(elem);
+    if (nodes.isNotEmpty) valueString = '$valueString,';
+
+    var currNode = nodes[index];
+    var currNodeStartIdx = currNode.span.start.offset;
+    var startOffset =
+        _baseYaml.yaml.lastIndexOf(RegExp(r',|\['), currNodeStartIdx) + 1;
+
+    _baseYaml._insert(startOffset, valueString, () {
+      var elemModifiableYAMLNode = _dummyMYamlNodeFrom(elem, _baseYaml);
+      nodes.insert(index, elemModifiableYAMLNode);
+    });
+  }
+
+  /// Performs the prepending of [elem] into the base yaml, noting that the current
+  /// list is a block list. [index] should be non-negative and less than or equal
+  /// to [length].
+  void _insertInBlockList(int index, dynamic elem) {
+    if (index < 0 || index > length) {
+      throw Exception('Invalid index $index provided!');
+    }
+    if (index == length) return _addToBlockList(elem);
+    if (index == 0) return _prependToBlockList(elem);
+
+    var valueString =
+        getBlockString(elem, indentation + _baseYaml.defaultIndentation);
+    var formattedValue = ''.padLeft(indentation) + '- ';
+
+    if (isCollection(elem)) {
+      formattedValue +=
+          valueString.substring(indentation + _baseYaml.defaultIndentation) +
+              '\n';
+    } else {
+      formattedValue += valueString + '\n';
+    }
+
+    var currNode = nodes[index];
+    var currNodeStartIdx = currNode.span.start.offset;
+    var startOffset = _baseYaml.yaml.lastIndexOf('\n', currNodeStartIdx) + 1;
+
+    _baseYaml._insert(startOffset, formattedValue, () {
+      var elemModifiableYAMLNode = _dummyMYamlNodeFrom(elem, _baseYaml);
+      nodes.insert(index, elemModifiableYAMLNode);
+    });
   }
 
   /// Performs the addition of [elem] into the base yaml, noting that the current
@@ -356,8 +490,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     if (nodes.isNotEmpty) valueString = ', ' + valueString;
 
     _baseYaml._insert(span.end.offset - 1, valueString, () {
-      var elemModifiableYAMLNode =
-          _dummyModifiableYamlNodeFrom(elem, _baseYaml);
+      var elemModifiableYAMLNode = _dummyMYamlNodeFrom(elem, _baseYaml);
       nodes.add(elemModifiableYAMLNode);
     });
   }
@@ -386,10 +519,8 @@ class _ModifiableYamlList extends _ModifiableYamlNode
       }
     }
 
-    _baseYaml._replaceRange(span.end.offset, span.end.offset, formattedValue,
-        () {
-      var elemModifiableYAMLNode =
-          _dummyModifiableYamlNodeFrom(elem, _baseYaml);
+    _baseYaml._insert(span.end.offset, formattedValue, () {
+      var elemModifiableYAMLNode = _dummyMYamlNodeFrom(elem, _baseYaml);
       nodes.add(elemModifiableYAMLNode);
     });
   }
@@ -426,7 +557,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
       return true;
     }
 
-    return value == other;
+    return false;
   }
 
   /// Gets the indentation level of the map. This is 0 if it is a flow map,
@@ -504,8 +635,8 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   /// Adds the [key]:[newValue] pairing into the map, bearing in mind
   /// that it is a flow Map.
   void _addToFlowMap(dynamic key, dynamic newValue) {
-    var keyNode = _dummyModifiableYamlNodeFrom(key, _baseYaml);
-    var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+    var keyNode = _dummyMYamlNodeFrom(key, _baseYaml);
+    var valueNode = _dummyMYamlNodeFrom(newValue, _baseYaml);
     // The -1 accounts for the closing bracket.
     if (nodes.isEmpty) {
       _baseYaml._insert(span.end.offset - 1, '$key: $newValue', () {
@@ -544,8 +675,8 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     formattedValue += valueString + '\n';
 
     _baseYaml._insert(offset, formattedValue, () {
-      var keyNode = _dummyModifiableYamlNodeFrom(key, _baseYaml);
-      var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+      var keyNode = _dummyMYamlNodeFrom(key, _baseYaml);
+      var valueNode = _dummyMYamlNodeFrom(newValue, _baseYaml);
       nodes[keyNode] = valueNode;
     });
   }
@@ -559,7 +690,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     if (isCollection(newValue)) valueString = '\n' + valueString;
 
     _baseYaml.replaceRangeFromSpan(valueSpan, valueString, () {
-      var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+      var valueNode = _dummyMYamlNodeFrom(newValue, _baseYaml);
       nodes[key] = valueNode;
     });
   }
@@ -576,7 +707,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     if (isCollection(newValue)) valueString = '\n' + valueString;
 
     _baseYaml._replaceRange(start, end, valueString, () {
-      var valueNode = _dummyModifiableYamlNodeFrom(newValue, _baseYaml);
+      var valueNode = _dummyMYamlNodeFrom(newValue, _baseYaml);
       nodes[key] = valueNode;
     });
   }
