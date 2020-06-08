@@ -32,74 +32,82 @@ class YamlEditBuilder {
   @override
   String toString() => _yaml;
 
-  /// Traverses down the provided [path] to the second-last node in the [path].
-  dynamic _getToBeforeLast(List<Object> path) {
+  /// Traverses down the provided [path] to the node at [path].
+  _ModifiableYamlNode _traverse(Iterable<Object> path) {
     var current = _contents;
-    // Traverse down the path list via indexes because we want to avoid the last
-    // key. We cannot use a for-in loop to check the value of the last element
-    // because it might be a primitive and repeated as a previous key.
-    for (var i = 0; i < path.length - 1; i++) {
-      current = current[path[i]];
+    for (var key in path) {
+      current = current[key];
     }
-
     return current;
   }
 
-  /// Gets the element represented by the [path].
-  dynamic _getElemInPath(List<Object> path) {
-    if (path.isEmpty) {
-      return _contents;
+  /// Traverses down the provided [path] to the list at [path].
+  _ModifiableYamlList _traverseToList(Iterable<Object> path) {
+    var possibleList = _traverse(path);
+
+    if (possibleList is _ModifiableYamlList) {
+      return possibleList;
+    } else {
+      throw TypeError();
     }
-    var current = _getToBeforeLast(path);
-    return current[path.last];
   }
 
   /// Gets the value of the element represented by the [path]. If the element is
   /// null, we return null.
-  dynamic getIn(List<Object> path) {
-    var elem = _getElemInPath(path);
+  dynamic getIn(Iterable<Object> path) {
+    var elem = _traverse(path);
     if (elem == null) return null;
     return elem.value;
   }
 
   /// Sets [value] in the [path]. If the [path] is not accessible (e.g. it currently
   /// does not exist in the document), an error will be thrown.
-  void setIn(List<Object> path, Object value) {
-    var current = _getToBeforeLast(path);
-    var lastNode = path.last;
-    current[lastNode] = value;
+  void setIn(Iterable<Object> path, Object value) {
+    var yamlCollection = _traverse(path.take(path.length - 1));
+
+    if (yamlCollection is _ModifiableYamlList) {
+      var lastNode = path.last;
+      yamlCollection[lastNode] = value;
+    } else if (yamlCollection is _ModifiableYamlMap) {
+      var lastNode = path.last;
+      yamlCollection[lastNode] = value;
+    } else {
+      throw TypeError();
+    }
   }
 
   /// Appends [value] into the list at [listPath], only if the element at the given path
   /// is a List.
-  void addInList(List<Object> listPath, Object value) {
-    var elem = _getElemInPath(listPath);
-    elem.add(value);
+  void addInList(Iterable<Object> listPath, Object value) {
+    var yamlList = _traverseToList(listPath);
+    yamlList.add(value);
   }
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
   /// is a List.
-  void prependInList(List<Object> listPath, Object value) {
-    var elem = _getElemInPath(listPath);
-    elem.prepend(value);
+  void prependInList(Iterable<Object> listPath, Object value) {
+    var yamlList = _traverseToList(listPath);
+    yamlList.prepend(value);
   }
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list. [index] must be non-negative and no greater than the list's length.
-  void insertInList(List<Object> listPath, int index, Object value) {
-    var elem = _getElemInPath(listPath);
+  void insertInList(Iterable<Object> listPath, int index, Object value) {
+    var elem = _traverseToList(listPath);
     elem.insert(index, value);
   }
 
   /// Removes the value in the path.
-  void removeIn(List<Object> path) {
-    var current = _getToBeforeLast(path);
+  void removeIn(Iterable<Object> path) {
+    var current = _traverse(path.take(path.length - 1));
     var lastNode = path.last;
 
     if (current is _ModifiableYamlList) {
       current.removeAt(lastNode);
-    } else {
+    } else if (current is _ModifiableYamlMap) {
       current.remove(lastNode);
+    } else {
+      throw TypeError();
     }
   }
 
@@ -145,51 +153,14 @@ class YamlEditBuilder {
 /// On top of the [YamlNode] elements, [_ModifiableYamlNode] also
 /// has the base [YamlEditBuilder] object so that we can imitate modifications.
 abstract class _ModifiableYamlNode extends YamlNode {
-  SourceSpan _span;
+  final SourceSpan _span;
 
   @override
   SourceSpan get span => _span;
 
-  YamlEditBuilder _baseYaml;
-}
+  final YamlEditBuilder _baseYaml;
 
-/// Creates a [_ModifiableYamlNode] from a [YamlNode]. Returns the original object
-/// if it is an instance of a [_ModifiableYamlNode].
-_ModifiableYamlNode _modifiedYamlNodeFrom(
-    YamlNode node, YamlEditBuilder baseYaml) {
-  switch (node.runtimeType) {
-    case YamlList:
-    case YamlListWrapper:
-      return _ModifiableYamlList.from(node as YamlList, baseYaml);
-    case YamlMap:
-    case YamlMapWrapper:
-      return _ModifiableYamlMap.from(node as YamlMap, baseYaml);
-    case YamlScalar:
-      return _ModifiableYamlScalar.from(node as YamlScalar, baseYaml);
-    case _ModifiableYamlList:
-    case _ModifiableYamlMap:
-    case _ModifiableYamlScalar:
-      return (node as _ModifiableYamlNode);
-    default:
-      throw UnsupportedError(
-          'Cannot create ModifiableYamlNode from ${node.runtimeType}');
-  }
-}
-
-/// Creates a dummy [_ModifiableYamlNode] from a value.
-_ModifiableYamlNode _dummyMYamlNodeFrom(
-    Object value, YamlEditBuilder baseYaml) {
-  var yamlNode;
-
-  if (value is List) {
-    yamlNode = YamlList.wrap(value);
-  } else if (value is Map) {
-    yamlNode = YamlMap.wrap(value);
-  } else {
-    yamlNode = YamlScalar.wrap(value);
-  }
-
-  return _modifiedYamlNodeFrom(yamlNode, baseYaml);
+  _ModifiableYamlNode(this._span, this._baseYaml);
 }
 
 /// A wrapped scalar parsed from YAML.
@@ -200,10 +171,8 @@ class _ModifiableYamlScalar extends _ModifiableYamlNode {
   @override
   dynamic get value => _yamlScalar.value;
 
-  _ModifiableYamlScalar.from(this._yamlScalar, YamlEditBuilder baseYaml) {
-    _span = _yamlScalar.span;
-    _baseYaml = baseYaml;
-  }
+  _ModifiableYamlScalar.from(this._yamlScalar, YamlEditBuilder baseYaml)
+      : super(_yamlScalar.span, baseYaml);
 
   @override
   String toString() => _yamlScalar.value.toString();
@@ -222,7 +191,7 @@ class _ModifiableYamlScalar extends _ModifiableYamlNode {
 /// on the base YAML document.
 class _ModifiableYamlList extends _ModifiableYamlNode
     with collection.ListMixin {
-  List<_ModifiableYamlNode> nodes;
+  final List<_ModifiableYamlNode> nodes = [];
 
   final CollectionStyle style;
 
@@ -255,11 +224,8 @@ class _ModifiableYamlList extends _ModifiableYamlNode
   ///
   /// [baseYaml] is the base [YamlEditBuilder] that [yamlList] is taken from.
   _ModifiableYamlList.from(YamlList yamlList, YamlEditBuilder baseYaml)
-      : style = yamlList.style {
-    _baseYaml = baseYaml;
-    _span = yamlList.span;
-
-    nodes = [];
+      : style = yamlList.style,
+        super(yamlList.span, baseYaml) {
     for (var node in yamlList.nodes) {
       nodes.add(_modifiedYamlNodeFrom(node, _baseYaml));
     }
@@ -531,9 +497,10 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   @override
   int get length => nodes.length;
 
-  Map<dynamic, _ModifiableYamlNode> nodes;
-
   final CollectionStyle style;
+
+  final Map<dynamic, _ModifiableYamlNode> nodes =
+      deepEqualsMap<dynamic, _ModifiableYamlNode>();
 
   @override
   String toString() => nodes.toString();
@@ -577,11 +544,8 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   }
 
   _ModifiableYamlMap.from(YamlMap yamlMap, YamlEditBuilder baseYaml)
-      : style = yamlMap.style {
-    _span = yamlMap.span;
-    _baseYaml = baseYaml;
-
-    nodes = deepEqualsMap<dynamic, _ModifiableYamlNode>();
+      : style = yamlMap.style,
+        super(yamlMap.span, baseYaml) {
     for (var entry in yamlMap.nodes.entries) {
       nodes[entry.key] = _modifiedYamlNodeFrom(entry.value, baseYaml);
     }
@@ -801,3 +765,42 @@ int _getContentSensitiveEnd(_ModifiableYamlNode node) {
 
 /// Checks if the item is a Map or a List
 bool _isCollection(Object item) => item is Map || item is List;
+
+/// Creates a dummy [_ModifiableYamlNode] from a value.
+_ModifiableYamlNode _dummyMYamlNodeFrom(
+    Object value, YamlEditBuilder baseYaml) {
+  var yamlNode;
+
+  if (value is List) {
+    yamlNode = YamlList.wrap(value);
+  } else if (value is Map) {
+    yamlNode = YamlMap.wrap(value);
+  } else {
+    yamlNode = YamlScalar.wrap(value);
+  }
+
+  return _modifiedYamlNodeFrom(yamlNode, baseYaml);
+}
+
+/// Creates a [_ModifiableYamlNode] from a [YamlNode]. Returns the original object
+/// if it is an instance of a [_ModifiableYamlNode].
+_ModifiableYamlNode _modifiedYamlNodeFrom(
+    YamlNode node, YamlEditBuilder baseYaml) {
+  switch (node.runtimeType) {
+    case YamlList:
+    case YamlListWrapper:
+      return _ModifiableYamlList.from(node as YamlList, baseYaml);
+    case YamlMap:
+    case YamlMapWrapper:
+      return _ModifiableYamlMap.from(node as YamlMap, baseYaml);
+    case YamlScalar:
+      return _ModifiableYamlScalar.from(node as YamlScalar, baseYaml);
+    case _ModifiableYamlList:
+    case _ModifiableYamlMap:
+    case _ModifiableYamlScalar:
+      return (node as _ModifiableYamlNode);
+    default:
+      throw UnsupportedError(
+          'Cannot create ModifiableYamlNode from ${node.runtimeType}');
+  }
+}
