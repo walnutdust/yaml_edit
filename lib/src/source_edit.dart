@@ -42,19 +42,19 @@ class SourceEdit {
       }
       return SourceEdit(offset, length, replacement);
     } else {
-      throw Exception('Invalid JSON passed to SourceEdit');
+      throw FormatException('Invalid JSON passed to SourceEdit');
     }
   }
 
   /// Encodes this object in JSON.
-  String toJSON() {
+  String toJson() {
     var map = {'offset': offset, 'length': length, 'replacement': replacement};
 
     return jsonEncode(map);
   }
 
   @override
-  String toString() => toJSON();
+  String toString() => toJson();
 
   /// Applies a series of [SourceEdit]s to an original string, and return the final output
   static String apply(String original, List<SourceEdit> edits) {

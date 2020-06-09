@@ -952,9 +952,9 @@ a: # comments
       expect(sourceEdit.replacement, 'hi');
     });
 
-    test('toJSON converts properly', () {
+    test('toJson converts properly', () {
       var sourceEdit = SourceEdit(1, 2, 'hi');
-      var sourceEditJSON = sourceEdit.toJSON();
+      var sourceEditJSON = sourceEdit.toJson();
 
       expect(sourceEditJSON,
           jsonEncode({'offset': 1, 'length': 2, 'replacement': 'hi'}));
