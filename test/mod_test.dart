@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:yaml/yaml.dart';
 
 import 'mod_utils.dart';
 
@@ -54,6 +55,38 @@ recipe:
   - verb: Rate
     inputs: Dish
     ''');
+    });
+  });
+
+  group('parseValueAt', () {
+    test('returns the expected value', () {
+      var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+
+      expect(doc.parseValueAt(['YAML']).value, "YAML Ain't Markup Language");
+    });
+
+    group('returns a YamlNode', () {
+      test('with the correct type', () {
+        var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+        var expectedYamlScalar = doc.parseValueAt(['YAML']);
+
+        expect(expectedYamlScalar is YamlScalar, equals(true));
+      });
+
+      test('with the correct type (2)', () {
+        var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+        var expectedYamlMap = doc.parseValueAt([]);
+
+        expect(expectedYamlMap is YamlMap, equals(true));
+      });
+
+      test('that is immutable', () {
+        var doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+        var expectedYamlMap = doc.parseValueAt([]);
+
+        expect(() => (expectedYamlMap as YamlMap)['YAML'] = 'test',
+            throwsUnsupportedError);
+      });
     });
   });
 

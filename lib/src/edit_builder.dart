@@ -32,7 +32,7 @@ class YamlEditBuilder {
   @override
   String toString() => _yaml;
 
-  /// Traverses down the provided [path] to the node at [path].
+  /// Traverses down the provided [path] to the _ModifiableYamlNode at [path].
   _ModifiableYamlNode _traverse(Iterable<Object> path) {
     var current = _contents;
     for (var key in path) {
@@ -41,7 +41,7 @@ class YamlEditBuilder {
     return current;
   }
 
-  /// Traverses down the provided [path] to the list at [path].
+  /// Traverses down the provided [path] to the _ModifiableYamlList at [path].
   _ModifiableYamlList _traverseToList(Iterable<Object> path) {
     var possibleList = _traverse(path);
 
@@ -52,12 +52,17 @@ class YamlEditBuilder {
     }
   }
 
-  /// Gets the value of the element represented by the [path]. If the element is
-  /// null, we return null.
-  dynamic getIn(Iterable<Object> path) {
-    var elem = _traverse(path);
-    if (elem == null) return null;
-    return elem.value;
+  /// Returns the value of the node at path as a YamlNode.
+  YamlNode parseValueAt(Iterable<Object> path) {
+    var value = _traverse(path).value;
+
+    if (value is _ModifiableYamlList) {
+      return YamlList.wrap(value);
+    } else if (value is _ModifiableYamlMap) {
+      return YamlMap.wrap(value);
+    } else {
+      return YamlScalar.wrap(value);
+    }
   }
 
   /// Sets [value] in the [path]. If the [path] is not accessible (e.g. it currently
@@ -766,7 +771,8 @@ int _getContentSensitiveEnd(_ModifiableYamlNode node) {
 /// Checks if the item is a Map or a List
 bool _isCollection(Object item) => item is Map || item is List;
 
-/// Creates a dummy [_ModifiableYamlNode] from a value.
+/// Creates a dummy [_ModifiableYamlNode] from a value. The span returned by this
+/// function does not have any meaningful value.
 _ModifiableYamlNode _dummyMYamlNodeFrom(
     Object value, YamlEditBuilder baseYaml) {
   var yamlNode;
