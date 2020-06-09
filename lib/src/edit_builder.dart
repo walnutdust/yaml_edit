@@ -106,8 +106,8 @@ class YamlEditBuilder {
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list. [index] must be non-negative and no greater than the list's length.
   void insertInList(Iterable<Object> listPath, int index, Object value) {
-    var elem = _traverseToList(listPath);
-    elem.insert(index, value);
+    var yamlList = _traverseToList(listPath);
+    yamlList.insert(index, value);
   }
 
   /// Removes the value in the path.
