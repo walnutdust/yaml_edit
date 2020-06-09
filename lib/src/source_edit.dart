@@ -1,9 +1,15 @@
 import 'dart:convert';
 
-/// A class representing a change on a String
+/// A class representing a change on a String, intended to be compatible with
+/// `package:analysis_server`'s [SourceEdit].
 class SourceEdit {
+  /// The offset from the start of the string where the modification begins.
   final int offset;
+
+  /// The length of the substring to be replaced.
   final int length;
+
+  /// The replacement string to be used.
   final String replacement;
 
   SourceEdit(this.offset, this.length, this.replacement);

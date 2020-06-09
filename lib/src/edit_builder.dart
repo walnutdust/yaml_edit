@@ -7,14 +7,22 @@ import 'package:yaml/yaml.dart';
 
 import './source_edit.dart';
 
-/// An interface for modifiable YAML documents which preserve Dart List and Map
-/// interfaces. Every time a modification takes place, the string is re-parsed,
-/// so users are guaranteed that calling toString() will result in valid YAML.
+/// An interface for modififying [YAML][1] documents while preserving comments and
+/// whitespaces.
+///
+/// YAML parsing is supported by `package:yaml`, and modifications are performed as
+/// string operations. Each time a modification takes place via one of the public
+/// methods, we calculate the expected final result, and parse the result YAML string,
+/// and ensure the two YAML trees match. Users may define the default settings to be
+/// applied to these string modifications. Note however that these settings only apply
+/// to portions of the YAML that are modified by this class.
+///
+/// [1]: https://yaml.org/
 class YamlEditBuilder {
   final List<SourceEdit> _edits = [];
   List<SourceEdit> get edits => [..._edits];
 
-  /// Original YAML string from which this instance is constructed.
+  /// Current YAML string.
   String _yaml;
 
   /// Root node of YAML AST.
@@ -24,13 +32,13 @@ class YamlEditBuilder {
 
   final int indentationStep;
 
+  @override
+  String toString() => _yaml;
+
   YamlEditBuilder(this._yaml, {this.indentationStep = 2}) {
     var contents = loadYamlNode(_yaml);
     _contents = _modifiedYamlNodeFrom(contents, this, []);
   }
-
-  @override
-  String toString() => _yaml;
 
   /// Traverses down the provided [path] to the _ModifiableYamlNode at [path].
   _ModifiableYamlNode _traverse(Iterable<Object> path) {
@@ -123,7 +131,7 @@ class YamlEditBuilder {
 
   /// Utility method to replace the substring in [_yaml] as denoted by
   /// the start and end of [span] with [replacement].
-  void replaceRangeFromSpan(SourceSpan span, String replacement,
+  void _replaceRangeFromSpan(SourceSpan span, String replacement,
       Iterable<Object> path, _ModifiableYamlNode expectedNode) {
     var start = span.start.offset;
     var end = span.end.offset;
@@ -277,7 +285,7 @@ class _ModifiableYamlList extends _ModifiableYamlNode
     updatedList.nodes[index] =
         _dummyMYamlNodeFrom(newValue, _baseYaml, [..._path, index]);
 
-    _baseYaml.replaceRangeFromSpan(
+    _baseYaml._replaceRangeFromSpan(
         currValue._span, newValue.toString(), _path, updatedList);
   }
 
@@ -698,7 +706,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
     var valueNode = _dummyMYamlNodeFrom(newValue, _baseYaml, [..._path, key]);
     updatedMap.nodes[key] = valueNode;
 
-    _baseYaml.replaceRangeFromSpan(valueSpan, valueString, _path, updatedMap);
+    _baseYaml._replaceRangeFromSpan(valueSpan, valueString, _path, updatedMap);
   }
 
   /// Updates the [key]:[newValue] pairing into the map, bearing in mind
@@ -723,7 +731,7 @@ class _ModifiableYamlMap extends _ModifiableYamlNode with collection.MapMixin {
   void clear() {
     var updatedMap = _clone();
     updatedMap.nodes.clear();
-    _baseYaml.replaceRangeFromSpan(span, '', _path, updatedMap);
+    _baseYaml._replaceRangeFromSpan(span, '', _path, updatedMap);
   }
 
   @override
