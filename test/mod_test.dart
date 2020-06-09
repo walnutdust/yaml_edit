@@ -87,6 +87,14 @@ recipe:
         expect(() => (expectedYamlMap as YamlMap)['YAML'] = 'test',
             throwsUnsupportedError);
       });
+
+      test('that has immutable children', () {
+        var doc = YamlEditBuilder("YAML: ['Y', 'A', 'M', 'L']");
+        var expectedYamlMap = doc.parseValueAt([]);
+
+        expect(() => (expectedYamlMap as YamlMap)['YAML'][0] = 'X',
+            throwsUnsupportedError);
+      });
     });
   });
 
