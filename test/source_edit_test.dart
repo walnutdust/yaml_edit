@@ -118,13 +118,13 @@ void main() {
 
   group('YamlEditBuilder records edits', () {
     test('returns empty list at start', () {
-      final yamlEditBuilder = YamlEditBuilder('YAML: YAML');
+      final yamlEditBuilder = YamlEditor('YAML: YAML');
 
       expect(yamlEditBuilder.edits, []);
     });
 
     test('after one change', () {
-      final yamlEditBuilder = YamlEditBuilder('YAML: YAML');
+      final yamlEditBuilder = YamlEditor('YAML: YAML');
       yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
 
       expect(yamlEditBuilder.edits,
@@ -132,7 +132,7 @@ void main() {
     });
 
     test('after multiple changes', () {
-      final yamlEditBuilder = YamlEditBuilder('YAML: YAML');
+      final yamlEditBuilder = YamlEditor('YAML: YAML');
       yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
       yamlEditBuilder.setIn(['XML'], 'Extensible Markup Language');
       yamlEditBuilder.removeIn(['YAML']);

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:path/path.dart' show dirname;
 import './test_case.dart';
 
 /// This script performs snapshot testing of the inputs in the testing directory

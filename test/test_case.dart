@@ -71,7 +71,7 @@ class TestCase {
   final List<String> states = [];
 
   String info;
-  YamlEditBuilder yamlBuilder;
+  YamlEditor yamlBuilder;
   List<YamlModification> modifications;
 
   TestCaseStates state = TestCaseStates.initialized;
@@ -95,7 +95,7 @@ class TestCase {
     var inputElements = input.split('\n---\n');
 
     info = inputElements[0];
-    yamlBuilder = YamlEditBuilder(inputElements[1]);
+    yamlBuilder = YamlEditor(inputElements[1]);
     var rawModifications = getValueFromYamlNode(loadYaml(inputElements[2]));
     modifications = parseModifications(rawModifications);
 

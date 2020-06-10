@@ -1,7 +1,7 @@
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:yaml/yaml.dart';
 
 void main() {
-  var doc = YamlEditBuilder('{a: 1, b: {d: 4, e: 5}, c: 3}');
-  doc.removeIn(['b', 'd']);
+  var doc = YamlEditor('');
   print(doc);
 }
