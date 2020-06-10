@@ -62,7 +62,7 @@ class YamlEditor {
     for (var key in path) {
       try {
         current = current.nodes[key];
-      } catch (NoSuchMethodError) {
+      } catch (Error) {
         if (current is List) {
           throw ArgumentError(
               'Invalid path $path: Invalid index $key supplied to List $current');

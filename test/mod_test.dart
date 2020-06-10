@@ -153,6 +153,16 @@ recipe:
     //   expectYamlBuilderValue(doc, 'replacement');
     // });
 
+    test('throw RangeError in list if index is negative', () {
+      final doc = YamlEditor("- YAML Ain't Markup Language");
+      expect(() => doc.setIn([-1], 'hi'), throwsRangeError);
+    });
+
+    test('throw RangeError in list if index is larger than list length', () {
+      final doc = YamlEditor("- YAML Ain't Markup Language");
+      expect(() => doc.setIn([2], 'hi'), throwsRangeError);
+    });
+
     test('simple block map', () {
       final doc = YamlEditor("YAML: YAML Ain't Markup Language");
       doc.setIn(['YAML'], 'hi');
@@ -256,16 +266,6 @@ d: 4
         'XML': 'XML Markup Language',
         'HTML': 'Hypertext Markup Language'
       });
-    });
-
-    test('throw RangeError in list if index is negative', () {
-      final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.setIn([-1], 'hi'), throwsRangeError);
-    });
-
-    test('throw RangeError in list if index is larger than list length', () {
-      final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.setIn([2], 'hi'), throwsRangeError);
     });
 
     test('simple block list', () {
