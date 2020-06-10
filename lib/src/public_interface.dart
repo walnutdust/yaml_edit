@@ -13,15 +13,15 @@ import './source_edit.dart';
 /// to portions of the YAML that are modified by this class.
 ///
 /// [1]: https://yaml.org/
-abstract class YamlEditBuilder {
+abstract class YamlEditor {
   /// The configuration to be used for the various string manipulation operations.
-  final YamlEditBuilderConfig config;
+  final YamlEditorConfig config;
 
   /// Returns a list of [SourceEdit]s detailing the string modifications that have
   /// been made. Intended to be compatible with `package:analysis_server`.
   List<SourceEdit> get edits;
 
-  YamlEditBuilder(String yaml, {this.config = const YamlEditBuilderConfig()});
+  YamlEditor(String yaml, {this.config = const YamlEditorConfig()});
 
   /// Returns the current YAML string after the various modifications.
   @override
@@ -32,7 +32,7 @@ abstract class YamlEditBuilder {
   /// and will not be updated when the YAML is updated in the future. For example,
   ///
   /// ```dart
-  /// final doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+  /// final doc = YamlEditor("YAML: YAML Ain't Markup Language");
   /// final node = doc.parseValueAt(['YAML']);
   ///
   /// print(node.value); /// Expected output: "YAML Ain't Markup Language"
@@ -65,15 +65,12 @@ abstract class YamlEditBuilder {
   /// is a list. [index] must be non-negative and no greater than the list's length.
   void insertInList(Iterable<Object> listPath, int index, Object value);
 
-  /// Checks if [value] is contained in a list at [listPath].
-  bool containsValueInList(Iterable<Object> listPath, Object value);
-
   /// Checks if a given [path] exists in the YAML.
   bool pathExists(Iterable<Object> path);
 }
 
-/// Configuration settings for [YamlEditBuilder].
-class YamlEditBuilderConfig {
+/// Configuration settings for [YamlEditor].
+class YamlEditorConfig {
   /// The number of additional spaces from the starting column between block YAML elements
   /// of adjacent levels.
   final int indentationStep;
@@ -82,6 +79,5 @@ class YamlEditBuilderConfig {
   /// we try to make collections in block style where possible.
   final bool enforceFlow;
 
-  const YamlEditBuilderConfig(
-      {this.indentationStep = 2, this.enforceFlow = false});
+  const YamlEditorConfig({this.indentationStep = 2, this.enforceFlow = false});
 }

@@ -58,37 +58,61 @@ recipe:
 
   group('parseValueAt', () {
     test('returns the expected value', () {
-      var doc = YamlEditor("YAML: YAML Ain't Markup Language");
+      final doc = YamlEditor("YAML: YAML Ain't Markup Language");
 
       expect(doc.parseValueAt(['YAML']).value, "YAML Ain't Markup Language");
     });
 
+    test('throws ArgumentError if invalid path is provided', () {
+      final doc = YamlEditor('{a: {d: 4}, c: ~}');
+
+      expect(() => doc.parseValueAt(['b', 'd']), throwsArgumentError);
+    });
+
+    test('returns null if key does not exist', () {
+      final doc = YamlEditor('{a: {d: 4}, c: ~}');
+
+      expect(doc.parseValueAt(['b']), equals(null));
+    });
+
+    test('throws RangeError if index is out of bounds', () {
+      final doc = YamlEditor('[0,1]');
+
+      expect(() => doc.parseValueAt([2]), throwsArgumentError);
+    });
+
+    test('throws RangeError if index is not an integer', () {
+      final doc = YamlEditor('[0,1]');
+
+      expect(() => doc.parseValueAt(['2']), throwsArgumentError);
+    });
+
     group('returns a YamlNode', () {
       test('with the correct type', () {
-        var doc = YamlEditor("YAML: YAML Ain't Markup Language");
-        var expectedYamlScalar = doc.parseValueAt(['YAML']);
+        final doc = YamlEditor("YAML: YAML Ain't Markup Language");
+        final expectedYamlScalar = doc.parseValueAt(['YAML']);
 
         expect(expectedYamlScalar is YamlScalar, equals(true));
       });
 
       test('with the correct type (2)', () {
-        var doc = YamlEditor("YAML: YAML Ain't Markup Language");
-        var expectedYamlMap = doc.parseValueAt([]);
+        final doc = YamlEditor("YAML: YAML Ain't Markup Language");
+        final expectedYamlMap = doc.parseValueAt([]);
 
         expect(expectedYamlMap is YamlMap, equals(true));
       });
 
       test('that is immutable', () {
-        var doc = YamlEditor("YAML: YAML Ain't Markup Language");
-        var expectedYamlMap = doc.parseValueAt([]);
+        final doc = YamlEditor("YAML: YAML Ain't Markup Language");
+        final expectedYamlMap = doc.parseValueAt([]);
 
         expect(() => (expectedYamlMap as YamlMap)['YAML'] = 'test',
             throwsUnsupportedError);
       });
 
       test('that has immutable children', () {
-        var doc = YamlEditor("YAML: ['Y', 'A', 'M', 'L']");
-        var expectedYamlMap = doc.parseValueAt([]);
+        final doc = YamlEditor("YAML: ['Y', 'A', 'M', 'L']");
+        final expectedYamlMap = doc.parseValueAt([]);
 
         expect(() => (expectedYamlMap as YamlMap)['YAML'][0] = 'X',
             throwsUnsupportedError);
@@ -97,8 +121,40 @@ recipe:
   });
 
   group('setIn', () {
+    // test('empty document', () {
+    //   final doc = YamlEditor('');
+    //   doc.setIn([], 'replacement');
+
+    //   expect(doc.toString(), equals('replacement'));
+    //   expectYamlBuilderValue(doc, 'replacement');
+    // });
+
+    // test('replaces string in document containing only a string', () {
+    //   final doc = YamlEditor('test');
+    //   doc.setIn([], 'replacement');
+
+    //   expect(doc.toString(), equals('replacement'));
+    //   expectYamlBuilderValue(doc, 'replacement');
+    // });
+
+    // test('replaces top-level list', () {
+    //   final doc = YamlEditor('- 1');
+    //   doc.setIn([], 'replacement');
+
+    //   expect(doc.toString(), equals('replacement'));
+    //   expectYamlBuilderValue(doc, 'replacement');
+    // });
+
+    // test('replaces top-level map', () {
+    //   final doc = YamlEditor('a: 1');
+    //   doc.setIn([], 'replacement');
+
+    //   expect(doc.toString(), equals('replacement'));
+    //   expectYamlBuilderValue(doc, 'replacement');
+    // });
+
     test('simple block map', () {
-      var doc = YamlEditor("YAML: YAML Ain't Markup Language");
+      final doc = YamlEditor("YAML: YAML Ain't Markup Language");
       doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('YAML: hi'));
@@ -106,7 +162,7 @@ recipe:
     });
 
     test('simple block map with comment', () {
-      var doc = YamlEditor("YAML: YAML Ain't Markup Language # comment");
+      final doc = YamlEditor("YAML: YAML Ain't Markup Language # comment");
       doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('YAML: hi # comment'));
@@ -114,7 +170,7 @@ recipe:
     });
 
     test('simple block map ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 2
 c: 3
@@ -130,7 +186,7 @@ d: 4
     });
 
     test('simple block map (2)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 ''');
       doc.setIn(['b'], 2);
@@ -142,7 +198,7 @@ b: 2
     });
 
     test('simple block map (3)', () {
-      var doc = YamlEditor('a: 1');
+      final doc = YamlEditor('a: 1');
       doc.setIn(['b'], 2);
       expect(doc.toString(), equals('''a: 1
 b: 2
@@ -151,7 +207,7 @@ b: 2
     });
 
     test('simple block map with trailing newline', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 2
 c: 3
@@ -171,7 +227,7 @@ d: 4
     });
 
     test('simple flow map', () {
-      var doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
+      final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
       doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('{YAML: hi}'));
@@ -179,7 +235,7 @@ d: 4
     });
 
     test('simple flow map with spacing', () {
-      var doc = YamlEditor("{YAML:  YAML Ain't Markup Language }");
+      final doc = YamlEditor("{YAML:  YAML Ain't Markup Language }");
       doc.setIn(['YAML'], 'hi');
 
       expect(doc.toString(), equals('{YAML:  hi}'));
@@ -187,7 +243,7 @@ d: 4
     });
 
     test('simple flow map with spacing (2)', () {
-      var doc = YamlEditor(
+      final doc = YamlEditor(
           "{ YAML:  YAML Ain't Markup Language , XML: Extensible Markup Language , HTML: Hypertext Markup Language }");
       doc.setIn(['XML'], 'XML Markup Language');
 
@@ -203,17 +259,17 @@ d: 4
     });
 
     test('throw RangeError in list if index is negative', () {
-      var doc = YamlEditor("- YAML Ain't Markup Language");
+      final doc = YamlEditor("- YAML Ain't Markup Language");
       expect(() => doc.setIn([-1], 'hi'), throwsRangeError);
     });
 
     test('throw RangeError in list if index is larger than list length', () {
-      var doc = YamlEditor("- YAML Ain't Markup Language");
+      final doc = YamlEditor("- YAML Ain't Markup Language");
       expect(() => doc.setIn([2], 'hi'), throwsRangeError);
     });
 
     test('simple block list', () {
-      var doc = YamlEditor("- YAML Ain't Markup Language");
+      final doc = YamlEditor("- YAML Ain't Markup Language");
       doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('- hi'));
@@ -221,7 +277,7 @@ d: 4
     });
 
     test('simple block list with comment', () {
-      var doc = YamlEditor("- YAML Ain't Markup Language # comment");
+      final doc = YamlEditor("- YAML Ain't Markup Language # comment");
       doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('- hi # comment'));
@@ -229,7 +285,7 @@ d: 4
     });
 
     test('simple block list with comment and spaces', () {
-      var doc = YamlEditor("-  YAML Ain't Markup Language  # comment");
+      final doc = YamlEditor("-  YAML Ain't Markup Language  # comment");
       doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('-  hi  # comment'));
@@ -237,7 +293,7 @@ d: 4
     });
 
     test('simple flow list', () {
-      var doc = YamlEditor("[YAML Ain't Markup Language]");
+      final doc = YamlEditor("[YAML Ain't Markup Language]");
       doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('[hi]'));
@@ -245,7 +301,7 @@ d: 4
     });
 
     test('simple flow list with spacing', () {
-      var doc = YamlEditor("[ YAML Ain't Markup Language ]");
+      final doc = YamlEditor("[ YAML Ain't Markup Language ]");
       doc.setIn([0], 'hi');
 
       expect(doc.toString(), equals('[ hi]'));
@@ -253,7 +309,7 @@ d: 4
     });
 
     test('simple flow list with spacing (2)', () {
-      var doc = YamlEditor('[ 0 , 1 , 2 , 3 ]');
+      final doc = YamlEditor('[ 0 , 1 , 2 , 3 ]');
       doc.setIn([1], 4);
 
       expect(doc.toString(), equals('[ 0 , 4, 2 , 3 ]'));
@@ -261,7 +317,7 @@ d: 4
     });
 
     test('nested block map', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -286,7 +342,7 @@ c: 3
     });
 
     test('nested block map (2)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: {d: 4, e: 5}
 c: 3
@@ -306,7 +362,7 @@ c: 3
     });
 
     test('nested block map scalar -> flow list', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -336,7 +392,7 @@ c: 3
     });
 
     test('nested block map -> scalar', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -354,7 +410,7 @@ c: 3
     });
 
     test('nested block map -> scalar (2)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -379,7 +435,7 @@ b: 2
     });
 
     test('nested block map scalar -> flow map', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -408,7 +464,7 @@ c: 3
     });
 
     test('nested block map with comments', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -432,7 +488,7 @@ c: 3
     });
 
     test('nested block map with comments (2)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4 # comment
@@ -460,7 +516,7 @@ c: 3
     });
 
     test('nested list', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - - 0
   - 1
@@ -487,7 +543,7 @@ c: 3
     });
 
     test('nested list flow map -> scalar', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - {a: 1, b: 2}
 - 2
@@ -504,7 +560,7 @@ c: 3
     });
 
     test('nested list-map-list-number update', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - a:
    - 1
@@ -534,7 +590,7 @@ c: 3
     });
 
     test('empty flow map ', () {
-      var doc = YamlEditor('{}');
+      final doc = YamlEditor('{}');
       doc.setIn(['a'], 1);
       expect(doc.toString(), equals('{a: 1}'));
       expectYamlBuilderValue(doc, {'a': 1});
@@ -543,7 +599,7 @@ c: 3
 
   group('removeIn', () {
     test('simple block map', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 2
 c: 3
@@ -556,7 +612,7 @@ c: 3
     });
 
     test('nested block map', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: 1
 b: 
   d: 4
@@ -573,19 +629,19 @@ c: 3
     });
 
     test('simple flow map ', () {
-      var doc = YamlEditor('{a: 1, b: 2, c: 3}');
+      final doc = YamlEditor('{a: 1, b: 2, c: 3}');
       doc.removeIn(['b']);
       expect(doc.toString(), equals('{a: 1, c: 3}'));
     });
 
     test('nested flow map ', () {
-      var doc = YamlEditor('{a: 1, b: {d: 4, e: 5}, c: 3}');
+      final doc = YamlEditor('{a: 1, b: {d: 4, e: 5}, c: 3}');
       doc.removeIn(['b', 'd']);
       expect(doc.toString(), equals('{a: 1, b: { e: 5}, c: 3}'));
     });
 
     test('simple block list ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - 1
 - 2
@@ -601,7 +657,7 @@ c: 3
     });
 
     test('simple block list (2)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - [1,2,3]
 - 2
@@ -617,7 +673,7 @@ c: 3
     });
 
     test('simple block list (3)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - {a: 1, b: 2}
 - 2
@@ -632,7 +688,7 @@ c: 3
       expectYamlBuilderValue(doc, [0, 2, 3]);
     });
     test('simple block list with comments', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - 1 # comments
 - 2
@@ -648,21 +704,21 @@ c: 3
     });
 
     test('simple flow list', () {
-      var doc = YamlEditor('[1, 2, 3]');
+      final doc = YamlEditor('[1, 2, 3]');
       doc.removeIn([1]);
       expect(doc.toString(), equals('[1, 3]'));
       expectYamlBuilderValue(doc, [1, 3]);
     });
 
     test('simple flow list (2)', () {
-      var doc = YamlEditor('[1, "b", "c"]');
+      final doc = YamlEditor('[1, "b", "c"]');
       doc.removeIn([1]);
       expect(doc.toString(), equals('[1, "c"]'));
       expectYamlBuilderValue(doc, [1, 'c']);
     });
 
     test('simple flow list (3)', () {
-      var doc = YamlEditor('[1, {a: 1}, "c"]');
+      final doc = YamlEditor('[1, {a: 1}, "c"]');
       doc.removeIn([1]);
       expect(doc.toString(), equals('[1, "c"]'));
       expectYamlBuilderValue(doc, [1, 'c']);
@@ -671,7 +727,7 @@ c: 3
 
   group('addInList', () {
     test('simple block list ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - 1
 - 2
@@ -689,7 +745,7 @@ c: 3
     });
 
     test('list to simple block list ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - 1
 - 2
@@ -715,7 +771,7 @@ c: 3
     });
 
     test('nested block list ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - - 1
   - 2
@@ -734,7 +790,7 @@ c: 3
     });
 
     test('block list to nested block list ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 0
 - - 1
   - 2
@@ -760,14 +816,14 @@ c: 3
     });
 
     test('simple flow list ', () {
-      var doc = YamlEditor('[0, 1, 2]');
+      final doc = YamlEditor('[0, 1, 2]');
       doc.addInList([], 3);
       expect(doc.toString(), equals('[0, 1, 2, 3]'));
       expectYamlBuilderValue(doc, [0, 1, 2, 3]);
     });
 
     test('empty flow list ', () {
-      var doc = YamlEditor('[]');
+      final doc = YamlEditor('[]');
       doc.addInList([], 0);
       expect(doc.toString(), equals('[0]'));
       expectYamlBuilderValue(doc, [0]);
@@ -776,21 +832,21 @@ c: 3
 
   group('prependInList', () {
     test('simple flow list', () {
-      var doc = YamlEditor('[1, 2]');
+      final doc = YamlEditor('[1, 2]');
       doc.prependInList([], 0);
       expect(doc.toString(), equals('[0, 1, 2]'));
       expectYamlBuilderValue(doc, [0, 1, 2]);
     });
 
     test('simple flow list with spaces', () {
-      var doc = YamlEditor('[ 1 , 2 ]');
+      final doc = YamlEditor('[ 1 , 2 ]');
       doc.prependInList([], 0);
       expect(doc.toString(), equals('[0,  1 , 2 ]'));
       expectYamlBuilderValue(doc, [0, 1, 2]);
     });
 
     test('simple block list', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 1
 - 2''');
       doc.prependInList([], 0);
@@ -802,7 +858,7 @@ c: 3
     });
 
     test('simple block list (2)', () {
-      var doc = YamlEditor('''- 1
+      final doc = YamlEditor('''- 1
 - 2''');
       doc.prependInList([], 0);
       expect(doc.toString(), equals('''- 0
@@ -812,7 +868,7 @@ c: 3
     });
 
     test('simple block list (3)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 1
 - 2
 ''');
@@ -826,7 +882,7 @@ c: 3
     });
 
     test('simple block list with comments ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 # comments
 - 1 # comments
 - 2
@@ -842,7 +898,7 @@ c: 3
     });
 
     test('block list nested in map', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a:
   - 1
   - 2
@@ -860,7 +916,7 @@ a:
     });
 
     test('block list nested in map with comments ', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 a: # comments
   - 1 # comments
   - 2
@@ -880,28 +936,28 @@ a: # comments
 
   group('insertInList', () {
     test('simple flow list', () {
-      var doc = YamlEditor('[1, 2]');
+      final doc = YamlEditor('[1, 2]');
       doc.insertInList([], 0, 0);
       expect(doc.toString(), equals('[0, 1, 2]'));
       expectYamlBuilderValue(doc, [0, 1, 2]);
     });
 
     test('simple flow list (2)', () {
-      var doc = YamlEditor('[1, 2]');
+      final doc = YamlEditor('[1, 2]');
       doc.insertInList([], 1, 3);
       expect(doc.toString(), equals('[1, 3, 2]'));
       expectYamlBuilderValue(doc, [1, 3, 2]);
     });
 
     test('simple flow list (3)', () {
-      var doc = YamlEditor('[1, 2]');
+      final doc = YamlEditor('[1, 2]');
       doc.insertInList([], 2, 3);
       expect(doc.toString(), equals('[1, 2, 3]'));
       expectYamlBuilderValue(doc, [1, 2, 3]);
     });
 
     test('simple block list', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 1
 - 2''');
       doc.insertInList([], 0, 0);
@@ -913,7 +969,7 @@ a: # comments
     });
 
     test('simple block list (2)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 1
 - 2''');
       doc.insertInList([], 1, 3);
@@ -925,7 +981,7 @@ a: # comments
     });
 
     test('simple block list (3)', () {
-      var doc = YamlEditor('''
+      final doc = YamlEditor('''
 - 1
 - 2
 ''');
@@ -936,6 +992,35 @@ a: # comments
 - 3
 '''));
       expectYamlBuilderValue(doc, [1, 2, 3]);
+    });
+  });
+
+  group('YamlEditor records edits', () {
+    test('returns empty list at start', () {
+      final yamlEditor = YamlEditor('YAML: YAML');
+
+      expect(yamlEditor.edits, []);
+    });
+
+    test('after one change', () {
+      final yamlEditor = YamlEditor('YAML: YAML');
+      yamlEditor.setIn(['YAML'], "YAML Ain't Markup Language");
+
+      expect(
+          yamlEditor.edits, [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
+    });
+
+    test('after multiple changes', () {
+      final yamlEditor = YamlEditor('YAML: YAML');
+      yamlEditor.setIn(['YAML'], "YAML Ain't Markup Language");
+      yamlEditor.setIn(['XML'], 'Extensible Markup Language');
+      yamlEditor.removeIn(['YAML']);
+
+      expect(yamlEditor.edits, [
+        SourceEdit(6, 4, "YAML Ain't Markup Language"),
+        SourceEdit(32, 0, '\nXML: Extensible Markup Language\n'),
+        SourceEdit(0, 32, '')
+      ]);
     });
   });
 }

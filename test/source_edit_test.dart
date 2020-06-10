@@ -115,33 +115,4 @@ void main() {
       });
     });
   });
-
-  group('YamlEditBuilder records edits', () {
-    test('returns empty list at start', () {
-      final yamlEditBuilder = YamlEditor('YAML: YAML');
-
-      expect(yamlEditBuilder.edits, []);
-    });
-
-    test('after one change', () {
-      final yamlEditBuilder = YamlEditor('YAML: YAML');
-      yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
-
-      expect(yamlEditBuilder.edits,
-          [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
-    });
-
-    test('after multiple changes', () {
-      final yamlEditBuilder = YamlEditor('YAML: YAML');
-      yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
-      yamlEditBuilder.setIn(['XML'], 'Extensible Markup Language');
-      yamlEditBuilder.removeIn(['YAML']);
-
-      expect(yamlEditBuilder.edits, [
-        SourceEdit(6, 4, "YAML Ain't Markup Language"),
-        SourceEdit(32, 0, '\nXML: Extensible Markup Language\n'),
-        SourceEdit(0, 32, '')
-      ]);
-    });
-  });
 }

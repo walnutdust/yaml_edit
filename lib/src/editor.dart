@@ -58,9 +58,24 @@ class YamlEditor {
   /// ```
   YamlNode parseValueAt(Iterable<Object> path) {
     var current = _contents;
+
     for (var key in path) {
-      current = current.nodes[key];
+      try {
+        current = current.nodes[key];
+      } catch (NoSuchMethodError) {
+        if (current is List) {
+          throw ArgumentError(
+              'Invalid path $path: Invalid index $key supplied to List $current');
+        } else if (current is Map) {
+          throw ArgumentError(
+              'Invalid path $path: Invalid key $key supplied to Map $current');
+        } else {
+          throw ArgumentError(
+              'Invalid path $path: Scalar $current does not accept key $key.');
+        }
+      }
     }
+
     return current;
   }
 
@@ -68,7 +83,6 @@ class YamlEditor {
   ///
   /// If the [path] is not accessible (e.g. it currently does not exist in the document),
   /// an error will be thrown.
-  /// TODO: empty path
   void setIn(Iterable<Object> path, Object value) {
     final collectionPath = path.take(path.length - 1);
     final yamlCollection = parseValueAt(collectionPath);
