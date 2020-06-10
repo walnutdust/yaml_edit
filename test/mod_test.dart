@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 import 'package:yaml/yaml.dart';
@@ -938,85 +936,6 @@ a: # comments
 - 3
 '''));
       expectYamlBuilderValue(doc, [1, 2, 3]);
-    });
-  });
-
-  group('SourceEdit', () {
-    test('from JSON converts properly', () {
-      var sourceEditMap = {'offset': 1, 'length': 2, 'replacement': 'hi'};
-      var sourceEditJSON = jsonEncode(sourceEditMap);
-      var sourceEdit = SourceEdit.fromJson(sourceEditJSON);
-
-      expect(sourceEdit.offset, 1);
-      expect(sourceEdit.length, 2);
-      expect(sourceEdit.replacement, 'hi');
-    });
-
-    test('toJson converts properly', () {
-      var sourceEdit = SourceEdit(1, 2, 'hi');
-      var sourceEditJSON = sourceEdit.toJson();
-
-      expect(sourceEditJSON,
-          jsonEncode({'offset': 1, 'length': 2, 'replacement': 'hi'}));
-    });
-
-    group('apply', () {
-      test('returns original string when empty list is passed in', () {
-        var original = 'YAML: YAML';
-        var result = SourceEdit.apply(original, []);
-
-        expect(result, original);
-      });
-      test('works with list of one SourceEdit', () {
-        var original = 'YAML: YAML';
-        var sourceEdits = [SourceEdit(6, 4, 'YAML Ain\'t Markup Language')];
-
-        var result = SourceEdit.apply(original, sourceEdits);
-
-        expect(result, "YAML: YAML Ain't Markup Language");
-      });
-      test('works with list of multiple SourceEdits', () {
-        var original = 'YAML: YAML';
-        var sourceEdits = [
-          SourceEdit(6, 4, "YAML Ain't Markup Language"),
-          SourceEdit(6, 4, "YAML Ain't Markup Language"),
-          SourceEdit(0, 4, "YAML Ain't Markup Language")
-        ];
-
-        var result = SourceEdit.apply(original, sourceEdits);
-
-        expect(result,
-            "YAML Ain't Markup Language: YAML Ain't Markup Language Ain't Markup Language");
-      });
-    });
-  });
-
-  group('YamlEditBuilder records edits', () {
-    test('returns empty list at start', () {
-      var yamlEditBuilder = YamlEditBuilder('YAML: YAML');
-
-      expect(yamlEditBuilder.edits, []);
-    });
-
-    test('after one change', () {
-      var yamlEditBuilder = YamlEditBuilder('YAML: YAML');
-      yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
-
-      expect(yamlEditBuilder.edits,
-          [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
-    });
-
-    test('after multiple changes', () {
-      var yamlEditBuilder = YamlEditBuilder('YAML: YAML');
-      yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
-      yamlEditBuilder.setIn(['XML'], 'Extensible Markup Language');
-      yamlEditBuilder.removeIn(['YAML']);
-
-      expect(yamlEditBuilder.edits, [
-        SourceEdit(6, 4, "YAML Ain't Markup Language"),
-        SourceEdit(32, 0, '\nXML: Extensible Markup Language\n'),
-        SourceEdit(0, 32, '')
-      ]);
     });
   });
 }

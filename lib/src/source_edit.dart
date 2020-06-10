@@ -1,4 +1,5 @@
-import 'dart:convert';
+import 'dart:convert' show jsonEncode, jsonDecode;
+import 'package:quiver_hashcode/hashcode.dart' show hash3;
 
 /// A class representing a change on a String, intended to be compatible with
 /// `package:analysis_server`'s [SourceEdit].
@@ -15,49 +16,71 @@ class SourceEdit {
   SourceEdit(this.offset, this.length, this.replacement);
 
   @override
-  bool operator ==(other) {
-    return offset == other.offset &&
-        length == other.length &&
-        replacement == other.replacement;
+  bool operator ==(Object other) {
+    if (other is SourceEdit) {
+      return offset == other.offset &&
+          length == other.length &&
+          replacement == other.replacement;
+    }
+
+    return false;
   }
 
-  /// Constructs a SourceEdit from a json-encoded String.
-  factory SourceEdit.fromJson(String json) {
+  @override
+  int get hashCode => hash3(offset, length, replacement);
+
+  /// Constructs a SourceEdit from Json.
+  ///
+  /// ```dart
+  /// import 'dart:convert' show jsonEncode;
+  ///
+  /// final editMap = {
+  ///   'offset': 1,
+  ///   'length': 2,
+  ///   'replacement': 'replacement string'
+  /// };
+  ///
+  /// final jsonMap = jsonEncode(editMap);
+  /// final sourceEdit = SourceEdit.fromJson(jsonMap);
+  /// ```
+  factory SourceEdit.fromJson(Object json) {
     var jsonEdit = jsonDecode(json);
 
     if (jsonEdit is Map) {
-      int offset;
-      if (jsonEdit.containsKey('offset') &&
-          jsonEdit.containsKey('length') &&
-          jsonEdit.containsKey('replacement')) {
-        offset = (jsonEdit['offset'] as int);
+      final offset = jsonEdit['offset'];
+      final length = jsonEdit['length'];
+      final replacement = jsonEdit['replacement'];
+
+      if (offset is int && length is int && replacement is String) {
+        return SourceEdit(offset, length, replacement);
       }
-      int length;
-      if (jsonEdit.containsKey('length')) {
-        length = (jsonEdit['length'] as int);
-      }
-      String replacement;
-      if (jsonEdit.containsKey('replacement')) {
-        replacement = (jsonEdit['replacement'] as String);
-      }
-      return SourceEdit(offset, length, replacement);
-    } else {
-      throw FormatException('Invalid JSON passed to SourceEdit');
     }
+    throw FormatException('Invalid JSON passed to SourceEdit');
   }
 
-  /// Encodes this object in JSON.
-  String toJson() {
+  /// Encodes this object as JSON-compatible structure.
+  ///
+  /// ```dart
+  /// import 'dart:convert' show jsonEncode;
+  ///
+  /// final edit = SourceEdit(offset, length, 'replacement string');
+  /// final jsonString = jsonEncode(edit.toJson());
+  /// print(jsonString);
+  /// ```
+  dynamic toJson() {
     var map = {'offset': offset, 'length': length, 'replacement': replacement};
 
     return jsonEncode(map);
   }
 
   @override
-  String toString() => toJson();
+  String toString() => 'SourceEdit($offset, $length, "$replacement")';
 
-  /// Applies a series of [SourceEdit]s to an original string, and return the final output
-  static String apply(String original, List<SourceEdit> edits) {
+  /// Applies a series of [SourceEdit]s to an original string, and return the final output.
+  ///
+  /// [edits] should be in order i.e. the first [SourceEdit] in [edits] should be the first
+  /// edit applied to [original].
+  static String apply(String original, Iterable<SourceEdit> edits) {
     var current = original;
     for (var edit in edits) {
       current = current.replaceRange(

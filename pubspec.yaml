@@ -1,9 +1,12 @@
 name: yaml_edit
-description: A library for YAML manipulation.
+description: A library for YAML manipulation with comment and whitespace preservation.
 version: 1.0.0
 
 environment:
   sdk: ">=2.4.0 <3.0.0"
+
+dependencies:
+  quiver_hashcode: ^2.0.0
 
 dev_dependencies:
   pedantic: ^1.9.0
