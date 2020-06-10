@@ -60,7 +60,22 @@ class YamlEditBuilder {
     }
   }
 
-  /// Returns the value of the node at path as a YamlNode.
+  /// Returns the [YamlNode] present at the path. The [YamlNode] that is returned represents
+  /// the current value when the function is called, and will not be updated when the YAML
+  /// is updated in the future. For example,
+  ///
+  /// ```dart
+  /// final doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+  /// final node = doc.parseValueAt(['YAML']);
+  ///
+  /// print(node.value); /// Expected output: "YAML Ain't Markup Language"
+  ///
+  /// doc.setIn(['YAML'], 'YAML');
+  ///
+  /// final newNode = doc.parseValueAt(['YAML']);
+  ///
+  /// print(newNode.value); /// "YAML"
+  /// print(node.value); /// "YAML Ain't Markup Language"
   YamlNode parseValueAt(Iterable<Object> path) {
     var value = _traverse(path).value;
 

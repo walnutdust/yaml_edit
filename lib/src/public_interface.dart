@@ -27,8 +27,24 @@ abstract class YamlEditBuilder {
   @override
   String toString();
 
-  /// Returns the [YamlNode] present at the path.
-  YamlNode parseValueAt(Iterable<Object> path);
+  /// Returns the [YamlNode] present at the path, or calls [orElse] if the path does not exist.
+  /// The [YamlNode] that is returned represents the current value when the function is called,
+  /// and will not be updated when the YAML is updated in the future. For example,
+  ///
+  /// ```dart
+  /// final doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
+  /// final node = doc.parseValueAt(['YAML']);
+  ///
+  /// print(node.value); /// Expected output: "YAML Ain't Markup Language"
+  ///
+  /// doc.setIn(['YAML'], 'YAML');
+  ///
+  /// final newNode = doc.parseValueAt(['YAML']);
+  ///
+  /// print(newNode.value); /// "YAML"
+  /// print(node.value); /// "YAML Ain't Markup Language"
+  /// ```
+  YamlNode parseValueAt(Iterable<Object> path, {Object Function() orElse});
 
   /// Sets [value] in the [path]. If the [path] is not accessible (e.g. it currently
   /// does not exist in the document), an error will be thrown.
