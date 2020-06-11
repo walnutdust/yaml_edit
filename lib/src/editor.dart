@@ -186,7 +186,7 @@ class YamlEditor {
     style ??= defaultStyle;
 
     var yamlList = _traverseToList(listPath);
-    final edit = _insertInList(_yaml, yamlList, listPath, index, value, style);
+    final edit = _insertInList(_yaml, yamlList, index, value, style);
 
     final expectedList = _updatedYamlList(
         yamlList, (nodes) => nodes.insert(index, _yamlNodeFrom(value)));
@@ -318,8 +318,8 @@ SourceEdit _prependToList(
 
 /// Performs the string operation on [yaml] to achieve a similar effect of
 /// inserting [elem] to the list at [index].
-SourceEdit _insertInList(String yaml, YamlList list, Iterable<Object> path,
-    int index, Object elem, YamlStyle style) {
+SourceEdit _insertInList(
+    String yaml, YamlList list, int index, Object elem, YamlStyle style) {
   if (index > list.length || index < 0) {
     throw RangeError.range(index, 0, list.length);
   }
