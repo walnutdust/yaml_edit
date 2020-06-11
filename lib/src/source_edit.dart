@@ -83,10 +83,15 @@ class SourceEdit {
   static String apply(String original, Iterable<SourceEdit> edits) {
     var current = original;
     for (var edit in edits) {
-      current = current.replaceRange(
-          edit.offset, edit.offset + edit.length, edit.replacement);
+      current = SourceEdit.applyOne(current, edit);
     }
 
     return current;
+  }
+
+  /// Applies one [SourceEdit]s to an original string, and return the final output.
+  static String applyOne(String original, SourceEdit edit) {
+    return original.replaceRange(
+        edit.offset, edit.offset + edit.length, edit.replacement);
   }
 }
