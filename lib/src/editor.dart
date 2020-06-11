@@ -778,4 +778,13 @@ class YamlStyle {
   final bool enforceFlow;
 
   const YamlStyle({this.indentationStep = 2, this.enforceFlow = false});
+
+  /// Creates a new [YamlStyle] with the same configuration options as before, except for
+  /// the properties specified in arguments.
+  YamlStyle withOpts({int indentStep, bool useFlow}) {
+    indentStep ??= indentationStep;
+    useFlow ??= enforceFlow;
+
+    return YamlStyle(indentationStep: indentStep, enforceFlow: useFlow);
+  }
 }
