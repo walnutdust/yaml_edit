@@ -107,6 +107,7 @@ abstract class YamlEditor {
   /// is a List. Takes an optional [style] parameter.
   ///
   /// **Convenience Method**
+  /// [addInList] is equivalent to [insertInList] with index = length.
   void addInList(Iterable<Object> listPath, Object value,
       {YamlStyle yamlStyle});
 
@@ -114,6 +115,7 @@ abstract class YamlEditor {
   /// is a List. Takes an optional [style] parameter.
   ///
   /// **Convenience Method**
+  /// [prependInList] is equivalent to [insertInList] with index = 0.
   void prependInList(Iterable<Object> listPath, Object value,
       {YamlStyle yamlStyle});
 
@@ -138,4 +140,13 @@ class YamlStyle {
   final bool enforceFlow;
 
   const YamlStyle({this.indentationStep = 2, this.enforceFlow = false});
+
+  /// Creates a new [YamlStyle] with the same configuration options as before, except for
+  /// the properties specified in arguments.
+  YamlStyle withOpts({int indentStep, bool useFlow}) {
+    indentStep ??= indentationStep;
+    useFlow ??= enforceFlow;
+
+    return YamlStyle(indentationStep: indentStep, enforceFlow: useFlow);
+  }
 }
