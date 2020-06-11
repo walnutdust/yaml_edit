@@ -12,27 +12,30 @@ import './source_edit.dart';
 /// applied to these string modifications. Note however that these settings only apply
 /// to portions of the YAML that are modified by this class.
 ///
+/// Most modification methods require the user to pass in an [Iterable<Object>] path that
+/// holds the keys/indices to navigate to the element. Key equality is performed via
+/// `package:yaml`'s [YamlMap]'s key equality.
+///
 /// [1]: https://yaml.org/
 abstract class YamlEditor {
   /// The configuration to be used for the various string manipulation operations.
-  final YamlEditorConfig config;
+  final YamlStyle config;
 
-  /// Returns a list of [SourceEdit]s detailing the string modifications that have
-  /// been made. Intended to be compatible with `package:analysis_server`.
-  List<SourceEdit> get edits;
+  /// List of [SourceEdit]s that have been applied to [_yaml] since the creation of this
+  /// instance, in chronological order. Intended to be compatible with `package:analysis_server`.
+  final List<SourceEdit> edits = [];
 
-  YamlEditor(String yaml, {this.config = const YamlEditorConfig()});
+  YamlEditor(String yaml, {this.config = const YamlStyle()});
 
   /// Returns the current YAML string after the various modifications.
   @override
   String toString();
 
-  /// Returns the [YamlNode] present at the path, or calls [orElse] if the path does not exist.
-  /// The [YamlNode] that is returned represents the current value when the function is called,
-  /// and will not be updated when the YAML is updated in the future. For example,
+  /// Returns the [YamlNode] present at the path. The [YamlNode] that is returned represents
+  /// the current value when the function is called, and will not be updated when the YAML
+  /// is updated in the future. For example,
   ///
   /// ```dart
-  /// final doc = YamlEditor("YAML: YAML Ain't Markup Language");
   /// final node = doc.parseValueAt(['YAML']);
   ///
   /// print(node.value); /// Expected output: "YAML Ain't Markup Language"
@@ -44,33 +47,88 @@ abstract class YamlEditor {
   /// print(newNode.value); /// "YAML"
   /// print(node.value); /// "YAML Ain't Markup Language"
   /// ```
+  ///
+  /// An [ArgumentError] will be thrown if calling the `[]` operator would have resulted in an
+  /// error, but `null` (as opposed to [YamlScalar] null) will be returned if the operation would
+  /// have resulted in a `null` value on a dart collection.
+  ///
+  /// ```dart
+  /// final doc = YamlEditor('{a: {d: 4}, c: ~}');
+  /// doc.parseValueAt(['b', 'd']); // ArgumentError
+  /// doc.parseValueAt(['b']); // null
+  /// doc.parseValueAt(['c']); // YamlScalar(null)
+  ///
+  /// final doc2 = YamlEditor('[0,1]');
+  /// doc2.parseValueAt([2]); // ArgumentError
+  /// doc2.parseValueAt(["2"]); // ArgumentError
+  /// ```
   YamlNode parseValueAt(Iterable<Object> path, {Object Function() orElse});
 
-  /// Sets [value] in the [path]. If the [path] is not accessible (e.g. it currently
-  /// does not exist in the document), an error will be thrown.
-  void setIn(Iterable<Object> path, Object value);
+  /// Sets [value] in the [path]. Takes an optional [style] parameter.
+  ///
+  /// If the [path] is not accessible (e.g. it currently does not exist in the document),
+  /// an error will be thrown. Note that [setIn] provides a different result as compared to
+  /// a [removeIn] followed by an [insertIn], because it preserves comments at the same level.
+  ///
+  /// ```dart
+  /// final doc = YamlEditor('''
+  ///   - 0
+  ///   - 1 # comment
+  ///   - 2
+  /// ''');
+  /// doc.setIn([1], 'test');
+  /// ```
+  ///
+  /// Expected Output:
+  /// '''
+  ///   - 0
+  ///   - test # comment
+  ///   - 2
+  /// '''
+  ///
+  /// ```dart
+  /// final doc2 = YamlEditor("[YAML Ain't Markup Language   # comment]");
+  /// doc2.removeIn([1]);
+  /// doc2.insertInList([1], 'test');
+  /// ```
+  ///
+  /// Expected Output:
+  /// '''
+  ///   - 0
+  ///   - test
+  ///   - 2
+  /// '''
+  void setIn(Iterable<Object> path, {YamlStyle style});
 
   /// Removes the value in the path.
   void removeIn(Iterable<Object> path);
 
   /// Appends [value] into the list at [listPath], only if the element at the given path
-  /// is a List.
-  void addInList(Iterable<Object> listPath, Object value);
+  /// is a List. Takes an optional [style] parameter.
+  ///
+  /// **Convenience Method**
+  void addInList(Iterable<Object> listPath, Object value,
+      {YamlStyle yamlStyle});
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
-  /// is a List.
-  void prependInList(Iterable<Object> listPath, Object value);
+  /// is a List. Takes an optional [style] parameter.
+  ///
+  /// **Convenience Method**
+  void prependInList(Iterable<Object> listPath, Object value,
+      {YamlStyle yamlStyle});
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list. [index] must be non-negative and no greater than the list's length.
-  void insertInList(Iterable<Object> listPath, int index, Object value);
+  /// Takes an optional [style] parameter.
+  void insertInList(Iterable<Object> listPath, int index, Object value,
+      {YamlStyle yamlStyle});
 
   /// Checks if a given [path] exists in the YAML.
   bool pathExists(Iterable<Object> path);
 }
 
-/// Configuration settings for [YamlEditor].
-class YamlEditorConfig {
+/// Style configuration settings for [YamlEditor] when modifying the YAML string.
+class YamlStyle {
   /// The number of additional spaces from the starting column between block YAML elements
   /// of adjacent levels.
   final int indentationStep;
@@ -79,5 +137,5 @@ class YamlEditorConfig {
   /// we try to make collections in block style where possible.
   final bool enforceFlow;
 
-  const YamlEditorConfig({this.indentationStep = 2, this.enforceFlow = false});
+  const YamlStyle({this.indentationStep = 2, this.enforceFlow = false});
 }

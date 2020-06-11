@@ -75,13 +75,13 @@ recipe:
       expect(doc.parseValueAt(['b']), equals(null));
     });
 
-    test('throws RangeError if index is out of bounds', () {
+    test('throws ArgumentError if index is out of bounds', () {
       final doc = YamlEditor('[0,1]');
 
       expect(() => doc.parseValueAt([2]), throwsArgumentError);
     });
 
-    test('throws RangeError if index is not an integer', () {
+    test('throws ArgumentError if index is not an integer', () {
       final doc = YamlEditor('[0,1]');
 
       expect(() => doc.parseValueAt(['2']), throwsArgumentError);

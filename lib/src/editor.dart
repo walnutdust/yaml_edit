@@ -13,28 +13,29 @@ import './source_edit.dart';
 /// applied to these string modifications. Note however that these settings only apply
 /// to portions of the YAML that are modified by this class.
 ///
+/// Most modification methods require the user to pass in an [Iterable<Object>] path that
+/// holds the keys/indices to navigate to the element. Key equality is performed via
+/// `package:yaml`'s [YamlMap]'s key equality.
+///
 /// [1]: https://yaml.org/
 class YamlEditor {
   /// List of [SourceEdit]s that have been applied to [_yaml] since the creation of this
-  /// instance, in chronological order.
+  /// instance, in chronological order. Intended to be compatible with `package:analysis_server`.
   final List<SourceEdit> edits = [];
 
   /// Current YAML string.
   String _yaml;
 
   /// Root node of YAML AST.
-  /// Definitely a [YamlNode], but dynamic allows us to implement both Map and List
-  /// operations easily.
-  dynamic _contents;
+  YamlNode _contents;
 
-  /// The number of additional spaces from the starting column between block YAML elements
-  /// of adjacent levels.
-  final int indentationStep;
+  /// Style configuration settings for [YamlEditor] when modifying the YAML string.
+  final YamlStyle defaultStyle;
 
   @override
   String toString() => _yaml;
 
-  YamlEditor(this._yaml, {this.indentationStep = 2}) {
+  YamlEditor(this._yaml, {this.defaultStyle = const YamlStyle()}) {
     _contents = loadYamlNode(_yaml);
   }
 
@@ -43,7 +44,6 @@ class YamlEditor {
   /// is updated in the future. For example,
   ///
   /// ```dart
-  /// final doc = YamlEditBuilder("YAML: YAML Ain't Markup Language");
   /// final node = doc.parseValueAt(['YAML']);
   ///
   /// print(node.value); /// Expected output: "YAML Ain't Markup Language"
@@ -55,8 +55,23 @@ class YamlEditor {
   /// print(newNode.value); /// "YAML"
   /// print(node.value); /// "YAML Ain't Markup Language"
   /// ```
+  ///
+  /// An [ArgumentError] will be thrown if calling the `[]` operator would have resulted in an
+  /// error, but `null` (as opposed to [YamlScalar] null) will be returned if the operation would
+  /// have resulted in a `null` value on a dart collection.
+  ///
+  /// ```dart
+  /// final doc = YamlEditor('{a: {d: 4}, c: ~}');
+  /// doc.parseValueAt(['b', 'd']); // ArgumentError
+  /// doc.parseValueAt(['b']); // null
+  /// doc.parseValueAt(['c']); // YamlScalar(null)
+  ///
+  /// final doc2 = YamlEditor('[0,1]');
+  /// doc2.parseValueAt([2]); // ArgumentError
+  /// doc2.parseValueAt(["2"]); // ArgumentError
+  /// ```
   YamlNode parseValueAt(Iterable<Object> path) {
-    var current = _contents;
+    dynamic current = _contents;
 
     for (var key in path) {
       try {
@@ -70,11 +85,41 @@ class YamlEditor {
     return current;
   }
 
-  /// Sets [value] in the [path].
+  /// Sets [value] in the [path]. Takes an optional [style] parameter.
   ///
   /// If the [path] is not accessible (e.g. it currently does not exist in the document),
-  /// an error will be thrown.
-  void setIn(Iterable<Object> path, Object value) {
+  /// an error will be thrown. Note that [setIn] provides a different result as compared to
+  /// a [removeIn] followed by an [insertIn], because it preserves comments at the same level.
+  ///
+  /// ```dart
+  /// final doc = YamlEditor('''
+  ///   - 0
+  ///   - 1 # comment
+  ///   - 2
+  /// ''');
+  /// doc.setIn([1], 'test');
+  /// ```
+  ///
+  /// Expected Output:
+  /// '''
+  ///   - 0
+  ///   - test # comment
+  ///   - 2
+  /// '''
+  ///
+  /// ```dart
+  /// final doc2 = YamlEditor("[YAML Ain't Markup Language   # comment]");
+  /// doc2.removeIn([1]);
+  /// doc2.insertInList([1], 'test');
+  /// ```
+  ///
+  /// Expected Output:
+  /// '''
+  ///   - 0
+  ///   - test
+  ///   - 2
+  /// '''
+  void setIn(Iterable<Object> path, Object value, {YamlStyle style}) {
     final collectionPath = path.take(path.length - 1);
     final yamlCollection = parseValueAt(collectionPath);
     final lastNode = path.last;
@@ -84,12 +129,14 @@ class YamlEditor {
 
     final valueNode = _yamlNodeFrom(value);
 
+    style ??= defaultStyle;
+
     if (yamlCollection is YamlList) {
-      edit = _setInList(this, yamlCollection, collectionPath, lastNode, value);
+      edit = _setInList(_yaml, yamlCollection, lastNode, value, style);
       expectedNode = _updatedYamlList(
           yamlCollection, (nodes) => nodes[lastNode] = valueNode);
     } else if (yamlCollection is YamlMap) {
-      edit = _setInMap(this, yamlCollection, collectionPath, lastNode, value);
+      edit = _setInMap(_yaml, yamlCollection, lastNode, value, style);
       final keyNode = _yamlNodeFrom(lastNode);
       expectedNode = _updatedYamlMap(
           yamlCollection, (nodes) => nodes[keyNode] = valueNode);
@@ -101,10 +148,14 @@ class YamlEditor {
   }
 
   /// Appends [value] into the list at [listPath], only if the element at the given path
-  /// is a [YamlList].
-  void addInList(Iterable<Object> listPath, Object value) {
+  /// is a [YamlList]. Takes an optional [style] parameter.
+  void addInList(Iterable<Object> listPath, Object value,
+      {YamlStyle yamlStyle}) {
+    var style = defaultStyle;
+    if (yamlStyle != null) style = yamlStyle;
+
     final yamlList = _traverseToList(listPath);
-    final edit = _addToList(this, yamlList, listPath, value);
+    final edit = _addToList(_yaml, yamlList, value, style);
 
     final expectedList =
         _updatedYamlList(yamlList, (nodes) => nodes.add(_yamlNodeFrom(value)));
@@ -113,10 +164,13 @@ class YamlEditor {
   }
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
-  /// is a [YamlList].
-  void prependInList(Iterable<Object> listPath, Object value) {
+  /// is a [YamlList].  Takes an optional [style] parameter.
+  void prependInList(Iterable<Object> listPath, Object value,
+      {YamlStyle style}) {
+    style ??= defaultStyle;
+
     final yamlList = _traverseToList(listPath);
-    final edit = _prependToList(this, yamlList, listPath, value);
+    final edit = _prependToList(_yaml, yamlList, value, style);
 
     final expectedList = _updatedYamlList(
         yamlList, (nodes) => nodes.insert(0, _yamlNodeFrom(value)));
@@ -126,9 +180,13 @@ class YamlEditor {
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list. [index] must be non-negative and no greater than the list's length.
-  void insertInList(Iterable<Object> listPath, int index, Object value) {
+  /// Takes an optional [style] parameter.
+  void insertInList(Iterable<Object> listPath, int index, Object value,
+      {YamlStyle style}) {
+    style ??= defaultStyle;
+
     var yamlList = _traverseToList(listPath);
-    final edit = _insertInList(this, yamlList, listPath, index, value);
+    final edit = _insertInList(_yaml, yamlList, listPath, index, value, style);
 
     final expectedList = _updatedYamlList(
         yamlList, (nodes) => nodes.insert(index, _yamlNodeFrom(value)));
@@ -146,11 +204,11 @@ class YamlEditor {
     var expectedNode;
 
     if (current is YamlList) {
-      edit = _removeInList(this, current, collectionPath, lastNode);
+      edit = _removeInList(_yaml, current, lastNode);
       expectedNode =
           _updatedYamlList(current, (nodes) => nodes.removeAt(lastNode));
     } else if (current is YamlMap) {
-      edit = _removeInMap(this, current, collectionPath, lastNode);
+      edit = _removeInMap(_yaml, current, lastNode);
 
       final keyNode = _getKeyNode(current, lastNode);
       expectedNode = _updatedYamlMap(current, (nodes) => nodes.remove(keyNode));
@@ -199,10 +257,10 @@ $expectedNode''');
   }
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of setting
+/// Performs the string operation on [yaml] to achieve the effect of setting
 /// the element at [index] to [newValue] when re-parsed.
-SourceEdit _setInList(YamlEditor yamlEditor, YamlList list,
-    Iterable<Object> path, int index, Object newValue) {
+SourceEdit _setInList(
+    String yaml, YamlList list, int index, Object newValue, YamlStyle style) {
   final currValue = list.nodes[index];
 
   final offset = currValue.span.start.offset;
@@ -211,59 +269,57 @@ SourceEdit _setInList(YamlEditor yamlEditor, YamlList list,
   return SourceEdit(offset, length, newValue.toString());
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of removing
+/// Performs the string operation on [yaml] to achieve the effect of removing
 /// the element at [index] when re-parsed.
 ///
 /// Returns the node that is removed.
-SourceEdit _removeInList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, int index) {
+SourceEdit _removeInList(String yaml, YamlList list, int index) {
   final nodeToRemove = list.nodes[index];
 
   if (list.style == CollectionStyle.FLOW) {
-    return _removeFromFlowList(yamlEditor, list, path, nodeToRemove, index);
+    return _removeFromFlowList(yaml, list, nodeToRemove, index);
   } else {
-    return _removeFromBlockList(yamlEditor, list, path, nodeToRemove, index);
+    return _removeFromBlockList(yaml, list, nodeToRemove, index);
   }
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of
+/// Performs the string operation on [yaml] to achieve the effect of
 /// removing [elem] when re-parsed.
 ///
 /// Returns `true` if [elem] was successfully found and removed, `false` otherwise.
-SourceEdit _removeFromList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+SourceEdit _removeFromList(String yaml, YamlList list, Object elem) {
   var index = _indexOf(list, elem);
   if (index == -1) return null;
 
-  return _removeInList(yamlEditor, list, path, index);
+  return _removeInList(yaml, list, index);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of
+/// Performs the string operation on [yaml] to achieve the effect of
 /// appending [elem] to the list.
 SourceEdit _addToList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+    String yaml, YamlList list, Object elem, YamlStyle style) {
   if (list.style == CollectionStyle.FLOW) {
-    return _addToFlowList(yamlEditor, list, path, elem);
+    return _addToFlowList(yaml, list, elem, style);
   } else {
-    return _addToBlockList(yamlEditor, list, path, elem);
+    return _addToBlockList(yaml, list, elem, style);
   }
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of
+/// Performs the string operation on [yaml] to achieve the effect of
 /// prepending [elem] to the list.
 SourceEdit _prependToList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+    String yaml, YamlList list, Object elem, YamlStyle style) {
   if (list.style == CollectionStyle.FLOW) {
-    return _prependToFlowList(yamlEditor, list, path, elem);
+    return _prependToFlowList(yaml, list, elem, style);
   } else {
-    return _prependToBlockList(yamlEditor, list, path, elem);
+    return _prependToBlockList(yaml, list, elem, style);
   }
 }
 
-/// Performs the string operation on [yamlEditor] to achieve a similar effect of
+/// Performs the string operation on [yaml] to achieve a similar effect of
 /// inserting [elem] to the list at [index].
-SourceEdit _insertInList(YamlEditor yamlEditor, YamlList list,
-    Iterable<Object> path, int index, Object elem) {
+SourceEdit _insertInList(String yaml, YamlList list, Iterable<Object> path,
+    int index, Object elem, YamlStyle style) {
   if (index > list.length || index < 0) {
     throw RangeError.range(index, 0, list.length);
   }
@@ -271,12 +327,12 @@ SourceEdit _insertInList(YamlEditor yamlEditor, YamlList list,
   /// We call the add method if the user wants to add it to the end of the list
   /// because appending requires different techniques.
   if (index == list.length) {
-    return _addToList(yamlEditor, list, path, elem);
+    return _addToList(yaml, list, elem, style);
   } else {
     if (list.style == CollectionStyle.FLOW) {
-      return _insertInFlowList(yamlEditor, list, path, index, elem);
+      return _insertInFlowList(yaml, list, index, elem, style);
     } else {
-      return _insertInBlockList(yamlEditor, list, path, index, elem);
+      return _insertInBlockList(yaml, list, index, elem, style);
     }
   }
 }
@@ -284,7 +340,7 @@ SourceEdit _insertInList(YamlEditor yamlEditor, YamlList list,
 /// Gets the indentation level of the list. This is 0 if it is a flow list,
 /// but returns the number of spaces before the hyphen of elements for
 /// block lists.
-int _getListIndentation(YamlEditor yamlEditor, YamlList list) {
+int _getListIndentation(String yaml, YamlList list) {
   if (list.style == CollectionStyle.FLOW) return 0;
 
   if (list.nodes.isEmpty) {
@@ -292,9 +348,9 @@ int _getListIndentation(YamlEditor yamlEditor, YamlList list) {
   }
 
   final lastSpanOffset = list.nodes.last.span.start.offset;
-  var lastNewLine = yamlEditor._yaml.lastIndexOf('\n', lastSpanOffset);
+  var lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
   if (lastNewLine == -1) lastNewLine = 0;
-  final lastHyphen = yamlEditor._yaml.lastIndexOf('-', lastSpanOffset);
+  final lastHyphen = yaml.lastIndexOf('-', lastSpanOffset);
 
   return lastHyphen - lastNewLine - 1;
 }
@@ -307,34 +363,35 @@ YamlList _updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
   return _yamlNodeFrom(newNodes);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of removing
+/// Performs the string operation on [yaml] to achieve the effect of removing
 /// [nodeToRemove] from [nodes], noting that this is a flow list.
-SourceEdit _removeFromFlowList(YamlEditor yamlEditor, YamlList list,
-    Iterable<Object> path, YamlNode nodeToRemove, int index) {
+SourceEdit _removeFromFlowList(
+    String yaml, YamlList list, YamlNode nodeToRemove, int index) {
   final span = nodeToRemove.span;
   var start = span.start.offset;
   var end = span.end.offset;
 
   if (index == 0) {
-    start = yamlEditor._yaml.lastIndexOf('[', start) + 1;
-    end = yamlEditor._yaml.indexOf(RegExp(r',|]'), end) + 1;
+    start = yaml.lastIndexOf('[', start) + 1;
+    end = yaml.indexOf(RegExp(r',|]'), end) + 1;
   } else {
-    start = yamlEditor._yaml.lastIndexOf(',', start);
+    start = yaml.lastIndexOf(',', start);
   }
 
   return SourceEdit(start, end - start, '');
-  //final updatedList = _updatedYamlList(list, (nodes) => nodes.removeAt(index));
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of removing
+/// Performs the string operation on [yaml] to achieve the effect of removing
 /// [nodeToRemove] from [nodes], noting that this is a block list.
-SourceEdit _removeFromBlockList(YamlEditor yamlEditor, YamlList list,
-    Iterable<Object> path, YamlNode removedNode, int index) {
+SourceEdit _removeFromBlockList(
+    String yaml, YamlList list, YamlNode removedNode, int index) {
   final span = removedNode.span;
-  final start = yamlEditor._yaml.lastIndexOf('\n', span.start.offset);
-  final end = yamlEditor._yaml.indexOf('\n', span.end.offset);
+  var start = yaml.lastIndexOf('\n', span.start.offset);
+  var end = yaml.indexOf('\n', span.end.offset);
 
-  // updatedList = _updatedYamlList(list, (nodes) => nodes.removeAt(index));
+  if (start == -1) start = 0;
+  if (end == -1) end = yaml.length;
+
   return SourceEdit(start, end - start, '');
 }
 
@@ -346,82 +403,72 @@ int _indexOf(YamlList list, Object element) {
   return -1;
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of prepending
+/// Performs the string operation on [yaml] to achieve the effect of prepending
 /// [elem] into [nodes], noting that this is a flow list.
 SourceEdit _prependToFlowList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+    String yaml, YamlList list, Object elem, YamlStyle style) {
   var valueString = _getFlowString(elem);
   if (list.nodes.isNotEmpty) valueString = '$valueString, ';
 
-  //final updatedList =
-  //  _updatedYamlList(list, (nodes) => nodes.insert(0, _yamlNodeFrom(elem)));
   return SourceEdit(list.span.start.offset + 1, 0, valueString);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of prepending
+/// Performs the string operation on [yaml] to achieve the effect of prepending
 /// [elem] into [nodes], noting that this is a block list.
 SourceEdit _prependToBlockList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+    String yaml, YamlList list, Object elem, YamlStyle style) {
   final valueString = _getBlockString(
-      elem, _getListIndentation(yamlEditor, list) + yamlEditor.indentationStep);
-  var formattedValue = ''.padLeft(_getListIndentation(yamlEditor, list)) + '- ';
+      elem, _getListIndentation(yaml, list) + style.indentationStep);
+  var formattedValue = ''.padLeft(_getListIndentation(yaml, list)) + '- ';
 
   if (_isCollection(elem)) {
     formattedValue += valueString.substring(
-            _getListIndentation(yamlEditor, list) +
-                yamlEditor.indentationStep) +
+            _getListIndentation(yaml, list) + style.indentationStep) +
         '\n';
   } else {
     formattedValue += valueString + '\n';
   }
 
-  final startOffset =
-      yamlEditor._yaml.lastIndexOf('\n', list.span.start.offset) + 1;
+  final startOffset = yaml.lastIndexOf('\n', list.span.start.offset) + 1;
 
-  // final updatedList =
-  //     _updatedYamlList(list, (nodes) => nodes.insert(0, _yamlNodeFrom(elem)));
   return SourceEdit(startOffset, 0, formattedValue);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of insertion
+/// Performs the string operation on [yaml] to achieve the effect of insertion
 /// [elem] into [nodes] at [index], noting that this is a flow list. [index] should
 /// be non-negative and less than or equal to [length].
-SourceEdit _insertInFlowList(YamlEditor yamlEditor, YamlList list,
-    Iterable<Object> path, int index, Object elem) {
-  if (index == list.length) return _addToFlowList(yamlEditor, list, path, elem);
-  if (index == 0) return _prependToFlowList(yamlEditor, list, path, elem);
+SourceEdit _insertInFlowList(
+    String yaml, YamlList list, int index, Object elem, YamlStyle style) {
+  if (index == list.length) return _addToFlowList(yaml, list, elem, style);
+  if (index == 0) return _prependToFlowList(yaml, list, elem, style);
 
   var valueString = ' ' + _getFlowString(elem);
   if (list.nodes.isNotEmpty) valueString = '$valueString,';
 
   final currNode = list.nodes[index];
   final currNodeStartIdx = currNode.span.start.offset;
-  final startOffset =
-      yamlEditor._yaml.lastIndexOf(RegExp(r',|\['), currNodeStartIdx) + 1;
+  final startOffset = yaml.lastIndexOf(RegExp(r',|\['), currNodeStartIdx) + 1;
 
-  // final updatedList = _updatedYamlList(
-  //     list, (nodes) => nodes.insert(index, _yamlNodeFrom(elem)));
   return SourceEdit(startOffset, 0, valueString);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of insertion
+/// Performs the string operation on [yaml] to achieve the effect of insertion
 /// [elem] into [nodes] at [index], noting that this is a block list. [index] should
 /// be non-negative and less than or equal to [length].
-SourceEdit _insertInBlockList(YamlEditor yamlEditor, YamlList list,
-    Iterable<Object> path, int index, Object elem) {
+SourceEdit _insertInBlockList(
+    String yaml, YamlList list, int index, Object elem, YamlStyle style) {
   if (index == list.length) {
-    return _addToBlockList(yamlEditor, list, path, elem);
+    return _addToBlockList(yaml, list, elem, style);
   }
-  if (index == 0) return _prependToBlockList(yamlEditor, list, path, elem);
+  if (index == 0) return _prependToBlockList(yaml, list, elem, style);
 
   final valueString = _getBlockString(
-      elem, _getListIndentation(yamlEditor, list) + yamlEditor.indentationStep);
-  var formattedValue = ''.padLeft(_getListIndentation(yamlEditor, list)) + '- ';
+      elem, _getListIndentation(yaml, list) + style.indentationStep);
+  var formattedValue = ''.padLeft(_getListIndentation(yaml, list)) + '- ';
 
   if (_isCollection(elem)) {
     formattedValue += valueString.substring(
-            _getListIndentation(yamlEditor, list) +
-                yamlEditor.indentationStep) +
+            _getListIndentation(yaml, list) + style.indentationStep) +
         '\n';
   } else {
     formattedValue += valueString + '\n';
@@ -429,38 +476,33 @@ SourceEdit _insertInBlockList(YamlEditor yamlEditor, YamlList list,
 
   final currNode = list.nodes[index];
   final currNodeStartIdx = currNode.span.start.offset;
-  final startOffset = yamlEditor._yaml.lastIndexOf('\n', currNodeStartIdx) + 1;
+  final startOffset = yaml.lastIndexOf('\n', currNodeStartIdx) + 1;
 
-  //final updatedList = _updatedYamlList(
-  //  list, (nodes) => nodes.insert(index, _yamlNodeFrom(elem)));
   return SourceEdit(startOffset, 0, formattedValue);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of addition
+/// Performs the string operation on [yaml] to achieve the effect of addition
 /// [elem] into [nodes], noting that this is a flow list.
 SourceEdit _addToFlowList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+    String yaml, YamlList list, Object elem, YamlStyle style) {
   var valueString = _getFlowString(elem);
   if (list.nodes.isNotEmpty) valueString = ', ' + valueString;
 
-  //final updatedList =
-  //    _updatedYamlList(list, (nodes) => nodes.add(_yamlNodeFrom(elem)));
   return SourceEdit(list.span.end.offset - 1, 0, valueString);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of addition
+/// Performs the string operation on [yaml] to achieve the effect of addition
 /// [elem] into [nodes], noting that this is a
 /// block list.
 SourceEdit _addToBlockList(
-    YamlEditor yamlEditor, YamlList list, Iterable<Object> path, Object elem) {
+    String yaml, YamlList list, Object elem, YamlStyle style) {
   final valueString = _getBlockString(
-      elem, _getListIndentation(yamlEditor, list) + yamlEditor.indentationStep);
-  var formattedValue = ''.padLeft(_getListIndentation(yamlEditor, list)) + '- ';
+      elem, _getListIndentation(yaml, list) + style.indentationStep);
+  var formattedValue = ''.padLeft(_getListIndentation(yaml, list)) + '- ';
 
   if (_isCollection(elem)) {
     formattedValue += valueString.substring(
-            _getListIndentation(yamlEditor, list) +
-                yamlEditor.indentationStep) +
+            _getListIndentation(yaml, list) + style.indentationStep) +
         '\n';
   } else {
     formattedValue += valueString + '\n';
@@ -469,51 +511,48 @@ SourceEdit _addToBlockList(
   // Adjusts offset to after the trailing newline of the last entry, if it exists
   if (list.nodes.isNotEmpty) {
     final lastValueSpanEnd = list.nodes.last.span.end.offset;
-    final nextNewLineIndex = yamlEditor._yaml.indexOf('\n', lastValueSpanEnd);
+    final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
     if (nextNewLineIndex == -1) {
       formattedValue = '\n' + formattedValue;
     }
   }
 
-  //final updatedList =
-  //    _updatedYamlList(list, (nodes) => nodes.add(_yamlNodeFrom(elem)));
   return SourceEdit(list.span.end.offset, 0, formattedValue);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of setting
+/// Performs the string operation on [yaml] to achieve the effect of setting
 /// the element at [key] to [newValue] when re-parsed.
-SourceEdit _setInMap(YamlEditor yamlEditor, YamlMap map, Iterable<Object> path,
-    Object key, Object newValue) {
+SourceEdit _setInMap(
+    String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   if (!map.nodes.containsKey(key)) {
     if (map.style == CollectionStyle.FLOW) {
-      return _addToFlowMap(yamlEditor, map, path, key, newValue);
+      return _addToFlowMap(yaml, map, key, newValue, style);
     } else {
-      return _addToBlockMap(yamlEditor, map, path, key, newValue);
+      return _addToBlockMap(yaml, map, key, newValue, style);
     }
   } else {
     if (map.style == CollectionStyle.FLOW) {
-      return _replaceInFlowMap(yamlEditor, map, path, key, newValue);
+      return _replaceInFlowMap(yaml, map, key, newValue, style);
     } else {
-      return _replaceInBlockMap(yamlEditor, map, path, key, newValue);
+      return _replaceInBlockMap(yaml, map, key, newValue, style);
     }
   }
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of removing
+/// Performs the string operation on [yaml] to achieve the effect of removing
 /// the element at [key] to [newValue] when re-parsed.
 ///
 /// Returns the [YamlNode] removed.
-SourceEdit _removeInMap(
-    YamlEditor yamlEditor, YamlMap map, Iterable<Object> path, Object key) {
+SourceEdit _removeInMap(String yaml, YamlMap map, Object key) {
   if (!map.nodes.containsKey(key)) return null;
 
   final keyNode = _getKeyNode(map, key);
   final valueNode = map.nodes[key];
 
   if (map.style == CollectionStyle.FLOW) {
-    return _removeFromFlowMap(yamlEditor, map, path, keyNode, valueNode, key);
+    return _removeFromFlowMap(yaml, map, keyNode, valueNode);
   } else {
-    return _removeFromBlockMap(yamlEditor, map, path, keyNode, valueNode);
+    return _removeFromBlockMap(yaml, map, keyNode, valueNode);
   }
 }
 
@@ -525,7 +564,7 @@ YamlNode _getKeyNode(YamlMap map, Object key) {
 
 /// Gets the indentation level of the map. This is 0 if it is a flow map,
 /// but returns the number of spaces before the keys for block maps.
-int _getMapIndentation(YamlEditor yamlEditor, YamlMap map) {
+int _getMapIndentation(String yaml, YamlMap map) {
   if (map.style == CollectionStyle.FLOW) return 0;
 
   if (map.nodes.isEmpty) {
@@ -534,7 +573,7 @@ int _getMapIndentation(YamlEditor yamlEditor, YamlMap map) {
 
   final lastKey = map.nodes.keys.last as YamlNode;
   final lastSpanOffset = lastKey.span.start.offset;
-  var lastNewLine = yamlEditor._yaml.lastIndexOf('\n', lastSpanOffset);
+  var lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
   if (lastNewLine == -1) lastNewLine = 0;
 
   return lastSpanOffset - lastNewLine - 1;
@@ -559,15 +598,10 @@ YamlMap _updatedYamlMap(YamlMap map, Function(Map<dynamic, YamlNode>) update) {
   return _yamlNodeFrom(updatedMap);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of adding
+/// Performs the string operation on [yaml] to achieve the effect of adding
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a flow map.
-SourceEdit _addToFlowMap(YamlEditor yamlEditor, YamlMap map,
-    Iterable<Object> path, Object key, Object newValue) {
-  final valueNode = _yamlNodeFrom(newValue);
-  final keyNode = _yamlNodeFrom(key);
-  final updatedMap =
-      _updatedYamlMap(map, (nodes) => nodes[keyNode] = valueNode);
-
+SourceEdit _addToFlowMap(
+    String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   // The -1 accounts for the closing bracket.
   if (map.nodes.isEmpty) {
     return SourceEdit(map.span.end.offset - 1, 0, '$key: $newValue');
@@ -576,19 +610,19 @@ SourceEdit _addToFlowMap(YamlEditor yamlEditor, YamlMap map,
   }
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of adding
+/// Performs the string operation on [yaml] to achieve the effect of adding
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a block map.
-SourceEdit _addToBlockMap(YamlEditor yamlEditor, YamlMap map,
-    Iterable<Object> path, Object key, Object newValue) {
-  final valueString = _getBlockString(newValue,
-      _getMapIndentation(yamlEditor, map) + yamlEditor.indentationStep);
-  var formattedValue = ' ' * _getMapIndentation(yamlEditor, map) + '$key: ';
+SourceEdit _addToBlockMap(
+    String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
+  final valueString = _getBlockString(
+      newValue, _getMapIndentation(yaml, map) + style.indentationStep);
+  var formattedValue = ' ' * _getMapIndentation(yaml, map) + '$key: ';
   var offset = map.span.end.offset;
 
   // Adjusts offset to after the trailing newline of the last entry, if it exists
   if (map.nodes.isNotEmpty) {
     final lastValueSpanEnd = map.nodes.values.last.span.end.offset;
-    final nextNewLineIndex = yamlEditor._yaml.indexOf('\n', lastValueSpanEnd);
+    final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
 
     if (nextNewLineIndex != -1) {
       offset = nextNewLineIndex + 1;
@@ -601,43 +635,33 @@ SourceEdit _addToBlockMap(YamlEditor yamlEditor, YamlMap map,
 
   formattedValue += valueString + '\n';
 
-  final valueNode = _yamlNodeFrom(newValue);
-  final keyNode = _yamlNodeFrom(key);
-  final updatedMap =
-      _updatedYamlMap(map, (nodes) => nodes[keyNode] = valueNode);
-
   return SourceEdit(offset, 0, formattedValue);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of replacing
+/// Performs the string operation on [yaml] to achieve the effect of replacing
 /// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
 /// flow map.
 
-SourceEdit _replaceInFlowMap(YamlEditor yamlEditor, YamlMap map,
-    Iterable<Object> path, Object key, Object newValue) {
+SourceEdit _replaceInFlowMap(
+    String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final valueSpan = map.nodes[key].span;
   var valueString = _getFlowString(newValue);
 
   if (_isCollection(newValue)) valueString = '\n' + valueString;
 
-  final valueNode = _yamlNodeFrom(newValue);
-  final keyNode = _getKeyNode(map, key);
-  final updatedMap =
-      _updatedYamlMap(map, (nodes) => nodes[keyNode] = valueNode);
-
   return SourceEdit(valueSpan.start.offset,
       valueSpan.end.offset - valueSpan.start.offset, valueString);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of replacing
+/// Performs the string operation on [yaml] to achieve the effect of replacing
 /// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
 /// block map.
-SourceEdit _replaceInBlockMap(YamlEditor yamlEditor, YamlMap map,
-    Iterable<Object> path, Object key, Object newValue) {
+SourceEdit _replaceInBlockMap(
+    String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final value = map.nodes[key];
   final keyNode = _getKeyNode(map, key);
-  var valueString = _getBlockString(newValue,
-      _getMapIndentation(yamlEditor, map) + yamlEditor.indentationStep);
+  var valueString = _getBlockString(
+      newValue, _getMapIndentation(yaml, map) + style.indentationStep);
 
   /// +2 accounts for the colon
   final start = keyNode.span.end.offset + 2;
@@ -645,46 +669,39 @@ SourceEdit _replaceInBlockMap(YamlEditor yamlEditor, YamlMap map,
 
   if (_isCollection(newValue)) valueString = '\n' + valueString;
 
-  final valueNode = _yamlNodeFrom(newValue);
-  final updatedMap =
-      _updatedYamlMap(map, (nodes) => nodes[keyNode] = valueNode);
-
   return SourceEdit(start, end - start, valueString);
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of removing
+/// Performs the string operation on [yaml] to achieve the effect of removing
 /// the [key] from the map, bearing in mind that this is a flow map.
-SourceEdit _removeFromFlowMap(YamlEditor yamlEditor, YamlMap map,
-    Iterable<Object> path, YamlNode keyNode, YamlNode valueNode, Object key) {
+SourceEdit _removeFromFlowMap(
+    String yaml, YamlMap map, YamlNode keyNode, YamlNode valueNode) {
   final keySpan = keyNode.span;
   final valueSpan = valueNode.span;
   var start = keySpan.start.offset;
   var end = valueSpan.end.offset;
 
-  if (deepEquals(key, map.nodes.keys.first)) {
-    start = yamlEditor._yaml.lastIndexOf('{', start) + 1;
-    end = yamlEditor._yaml.indexOf(RegExp(r',|}'), end) + 1;
+  if (deepEquals(keyNode, map.nodes.keys.first)) {
+    start = yaml.lastIndexOf('{', start) + 1;
+    end = yaml.indexOf(RegExp(r',|}'), end) + 1;
   } else {
-    start = yamlEditor._yaml.lastIndexOf(',', start);
+    start = yaml.lastIndexOf(',', start);
   }
 
-  final updatedMap = _updatedYamlMap(map, (nodes) => nodes.remove(keyNode));
   return SourceEdit(start, end - start, '');
 }
 
-/// Performs the string operation on [yamlEditor] to achieve the effect of removing
+/// Performs the string operation on [yaml] to achieve the effect of removing
 /// the [key] from the map, bearing in mind that this is a block map.
-SourceEdit _removeFromBlockMap(YamlEditor yamlEditor, YamlMap map,
-    Iterable<Object> path, YamlNode keyNode, YamlNode valueNode) {
+SourceEdit _removeFromBlockMap(
+    String yaml, YamlMap map, YamlNode keyNode, YamlNode valueNode) {
   var keySpan = keyNode.span;
   var valueSpan = valueNode.span;
-  var start = yamlEditor._yaml.lastIndexOf('\n', keySpan.start.offset);
-  var end = yamlEditor._yaml.indexOf('\n', valueSpan.end.offset);
+  var start = yaml.lastIndexOf('\n', keySpan.start.offset);
+  var end = yaml.indexOf('\n', valueSpan.end.offset);
 
   if (start == -1) start = 0;
-  if (end == -1) end = yamlEditor._yaml.length - 1;
-
-  final updatedMap = _updatedYamlMap(map, (nodes) => nodes.remove(keyNode));
+  if (end == -1) end = yaml.length - 1;
 
   return SourceEdit(start, end - start, '');
 }
@@ -748,4 +765,17 @@ YamlNode _yamlNodeFrom(Object value) {
   } else {
     return YamlScalar.wrap(value);
   }
+}
+
+/// Style configuration settings for [YamlEditor] when modifying the YAML string.
+class YamlStyle {
+  /// The number of additional spaces from the starting column between block YAML elements
+  /// of adjacent levels.
+  final int indentationStep;
+
+  /// Enforce flow structures when adding or modifying values. If this value is false,
+  /// we try to make collections in block style where possible.
+  final bool enforceFlow;
+
+  const YamlStyle({this.indentationStep = 2, this.enforceFlow = false});
 }
