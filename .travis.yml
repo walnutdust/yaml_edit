@@ -8,7 +8,7 @@ dart_task:
 script:
   - pub global activate coverage
   - dart --pause-isolates-on-exit --disable-service-auth-codes --enable-vm-service=9292 test/test_all.dart & pub global run coverage:collect_coverage --port=9292 --out=var/coverage.json --wait-paused --resume-isolates
-  - pub global run coverage:format_coverage --package=.packages --report-on lib --in var/coverage.json --out var/lcov.info --lcov
+  - pub global run coverage:format_coverage --packages=.packages --report-on lib --in var/coverage.json --out var/lcov.info --lcov
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
