@@ -32,24 +32,19 @@ class SourceEdit {
   /// Constructs a SourceEdit from Json.
   ///
   /// ```dart
-  /// import 'dart:convert' show jsonEncode;
-  ///
-  /// final editMap = {
+  /// final edit = {
   ///   'offset': 1,
   ///   'length': 2,
   ///   'replacement': 'replacement string'
   /// };
   ///
-  /// final jsonMap = jsonEncode(editMap);
-  /// final sourceEdit = SourceEdit.fromJson(jsonMap);
+  /// final sourceEdit = SourceEdit.fromJson(edit);
   /// ```
-  factory SourceEdit.fromJson(Object json) {
-    var jsonEdit = jsonDecode(json);
-
-    if (jsonEdit is Map) {
-      final offset = jsonEdit['offset'];
-      final length = jsonEdit['length'];
-      final replacement = jsonEdit['replacement'];
+  factory SourceEdit.fromJson(Map<String, dynamic> json) {
+    if (json is Map) {
+      final offset = json['offset'];
+      final length = json['length'];
+      final replacement = json['replacement'];
 
       if (offset is int && length is int && replacement is String) {
         return SourceEdit(offset, length, replacement);
@@ -67,10 +62,8 @@ class SourceEdit {
   /// final jsonString = jsonEncode(edit.toJson());
   /// print(jsonString);
   /// ```
-  dynamic toJson() {
-    var map = {'offset': offset, 'length': length, 'replacement': replacement};
-
-    return jsonEncode(map);
+  Map<String, dynamic> toJson() {
+    return {'offset': offset, 'length': length, 'replacement': replacement};
   }
 
   @override
@@ -80,18 +73,17 @@ class SourceEdit {
   ///
   /// [edits] should be in order i.e. the first [SourceEdit] in [edits] should be the first
   /// edit applied to [original].
-  static String apply(String original, Iterable<SourceEdit> edits) {
+  static String applyAll(String original, Iterable<SourceEdit> edits) {
     var current = original;
     for (var edit in edits) {
-      current = SourceEdit.applyOne(current, edit);
+      current = edit.apply(current);
     }
 
     return current;
   }
 
   /// Applies one [SourceEdit]s to an original string, and return the final output.
-  static String applyOne(String original, SourceEdit edit) {
-    return original.replaceRange(
-        edit.offset, edit.offset + edit.length, edit.replacement);
+  String apply(String original) {
+    return original.replaceRange(offset, offset + length, replacement);
   }
 }

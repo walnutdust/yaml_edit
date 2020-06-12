@@ -240,7 +240,7 @@ class YamlEditor {
   /// equal to [expectedNode] using `package:yaml`'s deep equality.
   void _performEdit(
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
-    _yaml = SourceEdit.applyOne(_yaml, edit);
+    _yaml = edit.apply(_yaml);
     _contents = loadYamlNode(_yaml);
     final actualNode = parseValueAt(path);
 

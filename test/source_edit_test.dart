@@ -1,5 +1,3 @@
-import 'dart:convert' show jsonDecode, jsonEncode;
-
 import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
@@ -12,8 +10,7 @@ void main() {
           'length': 2,
           'replacement': 'replacement string'
         };
-        final sourceEditJson = jsonEncode(sourceEditMap);
-        final sourceEdit = SourceEdit.fromJson(sourceEditJson);
+        final sourceEdit = SourceEdit.fromJson(sourceEditMap);
 
         expect(sourceEdit.offset, 1);
         expect(sourceEdit.length, 2);
@@ -21,31 +18,36 @@ void main() {
       });
 
       test('throws formatException if offset is non-int', () {
-        final sourceEditJson = jsonEncode(
-            {'offset': '1', 'length': 2, 'replacement': 'replacement string'});
+        final sourceEditJson = {
+          'offset': '1',
+          'length': 2,
+          'replacement': 'replacement string'
+        };
 
         expect(
             () => SourceEdit.fromJson(sourceEditJson), throwsFormatException);
       });
 
       test('throws formatException if length is non-int', () {
-        final sourceEditJson = jsonEncode(
-            {'offset': 1, 'length': '2', 'replacement': 'replacement string'});
+        final sourceEditJson = {
+          'offset': 1,
+          'length': '2',
+          'replacement': 'replacement string'
+        };
 
         expect(
             () => SourceEdit.fromJson(sourceEditJson), throwsFormatException);
       });
 
       test('throws formatException if replacement is non-string', () {
-        final sourceEditJson =
-            jsonEncode({'offset': 1, 'length': 2, 'replacement': 3});
+        final sourceEditJson = {'offset': 1, 'length': 2, 'replacement': 3};
 
         expect(
             () => SourceEdit.fromJson(sourceEditJson), throwsFormatException);
       });
 
       test('throws formatException if a field is not present', () {
-        final sourceEditJson = jsonEncode({'offset': 1, 'length': 2});
+        final sourceEditJson = {'offset': 1, 'length': 2};
 
         expect(
             () => SourceEdit.fromJson(sourceEditJson), throwsFormatException);
@@ -59,14 +61,6 @@ void main() {
 
         expect(
             sourceEditJson,
-            jsonEncode({
-              'offset': 1,
-              'length': 2,
-              'replacement': 'replacement string'
-            }));
-
-        expect(
-            jsonDecode(sourceEditJson),
             equals({
               'offset': 1,
               'length': 2,
@@ -85,10 +79,10 @@ void main() {
       });
     });
 
-    group('apply', () {
+    group('applyAll', () {
       test('returns original string when empty list is passed in', () {
         final original = 'YAML: YAML';
-        final result = SourceEdit.apply(original, []);
+        final result = SourceEdit.applyAll(original, []);
 
         expect(result, original);
       });
@@ -96,7 +90,7 @@ void main() {
         final original = 'YAML: YAML';
         final sourceEdits = [SourceEdit(6, 4, 'YAML Ain\'t Markup Language')];
 
-        final result = SourceEdit.apply(original, sourceEdits);
+        final result = SourceEdit.applyAll(original, sourceEdits);
 
         expect(result, "YAML: YAML Ain't Markup Language");
       });
@@ -108,7 +102,7 @@ void main() {
           SourceEdit(0, 4, "YAML Ain't Markup Language")
         ];
 
-        final result = SourceEdit.apply(original, sourceEdits);
+        final result = SourceEdit.applyAll(original, sourceEdits);
 
         expect(result,
             "YAML Ain't Markup Language: YAML Ain't Markup Language Ain't Markup Language");
