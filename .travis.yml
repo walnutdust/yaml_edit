@@ -12,7 +12,9 @@ matrix:
         - pub global activate coverage
         - dart --pause-isolates-on-exit --disable-service-auth-codes --enable-vm-service=9292 test/test_all.dart & pub global run coverage:collect_coverage --port=9292 --out=var/coverage.json --wait-paused --resume-isolates
         - pub global run coverage:format_coverage --packages=.packages --report-on lib --in var/coverage.json --out var/lcov.info --lcov
+        - bash <(curl -s https://codecov.io/bash)
       name: Collect and report coverage
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+cache:
+  directories:
+    - "$HOME/.pub-cache"

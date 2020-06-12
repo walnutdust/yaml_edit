@@ -993,6 +993,20 @@ a: # comments
 '''));
       expectYamlBuilderValue(doc, [1, 2, 3]);
     });
+
+    test('simple block list with comments', () {
+      final doc = YamlEditor('''
+- 0 # comment a
+- 2 # comment b
+''');
+      doc.insertInList([], 1, 1);
+      expect(doc.toString(), equals('''
+- 0 # comment a
+- 1
+- 2 # comment b
+'''));
+      expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
   });
 
   group('YamlEditor records edits', () {
@@ -1016,6 +1030,25 @@ a: # comments
       yamlEditor.setIn(['XML'], 'Extensible Markup Language');
       yamlEditor.removeIn(['YAML']);
 
+      expect(yamlEditor.edits, [
+        SourceEdit(6, 4, "YAML Ain't Markup Language"),
+        SourceEdit(32, 0, '\nXML: Extensible Markup Language\n'),
+        SourceEdit(0, 32, '')
+      ]);
+    });
+
+    test('that do not automatically update with internal list', () {
+      final yamlEditor = YamlEditor('YAML: YAML');
+      yamlEditor.setIn(['YAML'], "YAML Ain't Markup Language");
+
+      final firstEdits = yamlEditor.edits;
+
+      expect(firstEdits, [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
+
+      yamlEditor.setIn(['XML'], 'Extensible Markup Language');
+      yamlEditor.removeIn(['YAML']);
+
+      expect(firstEdits, [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
       expect(yamlEditor.edits, [
         SourceEdit(6, 4, "YAML Ain't Markup Language"),
         SourceEdit(32, 0, '\nXML: Extensible Markup Language\n'),

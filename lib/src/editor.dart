@@ -1,3 +1,5 @@
+import 'dart:collection' show UnmodifiableListView;
+
 import 'package:yaml/src/equality.dart';
 import 'package:yaml/yaml.dart';
 
@@ -24,7 +26,10 @@ import './source_edit.dart';
 class YamlEditor {
   /// List of [SourceEdit]s that have been applied to [_yaml] since the creation of this
   /// instance, in chronological order. Intended to be compatible with `package:analysis_server`.
-  final List<SourceEdit> edits = [];
+  final List<SourceEdit> _edits = [];
+
+  UnmodifiableListView<SourceEdit> get edits =>
+      UnmodifiableListView<SourceEdit>([..._edits]);
 
   /// Current YAML string.
   String _yaml;
@@ -157,18 +162,10 @@ class YamlEditor {
   /// Users have the option of defining the indentation applied and whether
   /// flow structures will be applied via the optional parameter [style]. For a comprehensive
   /// list of styling options, refer to the documentation for [YamlStyle].
-  void addInList(Iterable<Object> listPath, Object value,
-      {YamlStyle yamlStyle}) {
-    var style = defaultStyle;
-    if (yamlStyle != null) style = yamlStyle;
+  void addInList(Iterable<Object> listPath, Object value, {YamlStyle style}) {
+    var yamlList = _traverseToList(listPath);
 
-    final yamlList = _traverseToList(listPath);
-    final edit = _addToList(_yaml, yamlList, value, style);
-
-    final expectedList =
-        _updatedYamlList(yamlList, (nodes) => nodes.add(_yamlNodeFrom(value)));
-
-    _performEdit(edit, listPath, expectedList);
+    insertInList(listPath, yamlList.length, value, style: style);
   }
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
@@ -259,7 +256,7 @@ Expected:
 $expectedNode''');
     }
 
-    edits.add(edit);
+    _edits.add(edit);
   }
 }
 

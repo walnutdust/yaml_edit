@@ -119,7 +119,8 @@ abstract class YamlEditor {
       {YamlStyle yamlStyle});
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
-  /// is a List.
+  /// is a List. This increases the length of the list by one and shfits all objects greater
+  /// than or after the index towards the end of the list.
   ///
   /// Users have the option of defining the indentation applied and whether
   /// flow structures will be applied via the optional parameter [style]. For a comprehensive
@@ -131,7 +132,10 @@ abstract class YamlEditor {
       {YamlStyle yamlStyle});
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
-  /// is a list. [index] must be non-negative and no greater than the list's length.
+  /// is a list. This increases the length of the list by one and shfits all objects greater
+  /// than or after the index towards the end of the list.
+  ///
+  /// [index] must be non-negative and no greater than the list's length.
   ///
   /// Users have the option of defining the indentation applied and whether
   /// flow structures will be applied via the optional parameter [style]. For a comprehensive
