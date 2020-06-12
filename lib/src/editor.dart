@@ -9,9 +9,12 @@ import './source_edit.dart';
 /// YAML parsing is supported by `package:yaml`, and modifications are performed as
 /// string operations. Each time a modification takes place via one of the public
 /// methods, we calculate the expected final result, and parse the result YAML string,
-/// and ensure the two YAML trees match. Users may define the default settings to be
-/// applied to these string modifications. Note however that these settings only apply
-/// to portions of the YAML that are modified by this class.
+/// and ensure the two YAML trees match, throwing an exception otherwise. Such a situation
+/// should be extremely rare, and should only occur with degenerate formatting.
+///
+/// Users may define the default settings to be applied to these string modifications.
+/// Note however that these settings only apply to portions of the YAML that are modified
+/// by this class.
 ///
 /// Most modification methods require the user to pass in an [Iterable<Object>] path that
 /// holds the keys/indices to navigate to the element. Key equality is performed via
@@ -121,7 +124,7 @@ class YamlEditor {
   /// '''
   void setIn(Iterable<Object> path, Object value, {YamlStyle style}) {
     final collectionPath = path.take(path.length - 1);
-    final yamlCollection = parseValueAt(collectionPath);
+    final maybeCollection = parseValueAt(collectionPath);
     final lastNode = path.last;
 
     var edit;
@@ -131,24 +134,29 @@ class YamlEditor {
 
     style ??= defaultStyle;
 
-    if (yamlCollection is YamlList) {
-      edit = _setInList(_yaml, yamlCollection, lastNode, value, style);
+    if (maybeCollection is YamlList) {
+      edit = _setInList(_yaml, maybeCollection, lastNode, value, style);
       expectedNode = _updatedYamlList(
-          yamlCollection, (nodes) => nodes[lastNode] = valueNode);
-    } else if (yamlCollection is YamlMap) {
-      edit = _setInMap(_yaml, yamlCollection, lastNode, value, style);
+          maybeCollection, (nodes) => nodes[lastNode] = valueNode);
+    } else if (maybeCollection is YamlMap) {
+      edit = _setInMap(_yaml, maybeCollection, lastNode, value, style);
       final keyNode = _yamlNodeFrom(lastNode);
       expectedNode = _updatedYamlMap(
-          yamlCollection, (nodes) => nodes[keyNode] = valueNode);
+          maybeCollection, (nodes) => nodes[keyNode] = valueNode);
     } else {
-      throw TypeError();
+      throw ArgumentError(
+          'Scalar $maybeCollection does not have key $lastNode');
     }
 
     _performEdit(edit, collectionPath, expectedNode);
   }
 
   /// Appends [value] into the list at [listPath], only if the element at the given path
-  /// is a [YamlList]. Takes an optional [style] parameter.
+  /// is a [YamlList].
+  ///
+  /// Users have the option of defining the indentation applied and whether
+  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
+  /// list of styling options, refer to the documentation for [YamlStyle].
   void addInList(Iterable<Object> listPath, Object value,
       {YamlStyle yamlStyle}) {
     var style = defaultStyle;
@@ -164,23 +172,21 @@ class YamlEditor {
   }
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
-  /// is a [YamlList].  Takes an optional [style] parameter.
+  /// is a [YamlList].
+  ///
+  /// Users have the option of defining the indentation applied and whether
+  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
+  /// list of styling options, refer to the documentation for [YamlStyle].
   void prependInList(Iterable<Object> listPath, Object value,
-      {YamlStyle style}) {
-    style ??= defaultStyle;
-
-    final yamlList = _traverseToList(listPath);
-    final edit = _prependToList(_yaml, yamlList, value, style);
-
-    final expectedList = _updatedYamlList(
-        yamlList, (nodes) => nodes.insert(0, _yamlNodeFrom(value)));
-
-    _performEdit(edit, listPath, expectedList);
-  }
+          {YamlStyle style}) =>
+      insertInList(listPath, 0, value, style: style);
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list. [index] must be non-negative and no greater than the list's length.
-  /// Takes an optional [style] parameter.
+  ///
+  /// Users have the option of defining the indentation applied and whether
+  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
+  /// list of styling options, refer to the documentation for [YamlStyle].
   void insertInList(Iterable<Object> listPath, int index, Object value,
       {YamlStyle style}) {
     style ??= defaultStyle;
@@ -305,17 +311,6 @@ SourceEdit _addToList(
   }
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of
-/// prepending [elem] to the list.
-SourceEdit _prependToList(
-    String yaml, YamlList list, Object elem, YamlStyle style) {
-  if (list.style == CollectionStyle.FLOW) {
-    return _prependToFlowList(yaml, list, elem, style);
-  } else {
-    return _prependToBlockList(yaml, list, elem, style);
-  }
-}
-
 /// Performs the string operation on [yaml] to achieve a similar effect of
 /// inserting [elem] to the list at [index].
 SourceEdit _insertInList(
@@ -328,6 +323,12 @@ SourceEdit _insertInList(
   /// because appending requires different techniques.
   if (index == list.length) {
     return _addToList(yaml, list, elem, style);
+  } else if (index == 0) {
+    if (list.style == CollectionStyle.FLOW) {
+      return _prependToFlowList(yaml, list, elem, style);
+    } else {
+      return _prependToBlockList(yaml, list, elem, style);
+    }
   } else {
     if (list.style == CollectionStyle.FLOW) {
       return _insertInFlowList(yaml, list, index, elem, style);

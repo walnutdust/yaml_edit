@@ -1,4 +1,3 @@
-import 'dart:convert' show jsonEncode, jsonDecode;
 import 'package:quiver_hashcode/hashcode.dart' show hash3;
 
 /// A class representing a change on a String, intended to be compatible with

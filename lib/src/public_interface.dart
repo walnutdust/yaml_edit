@@ -8,9 +8,12 @@ import './source_edit.dart';
 /// YAML parsing is supported by `package:yaml`, and modifications are performed as
 /// string operations. Each time a modification takes place via one of the public
 /// methods, we calculate the expected final result, and parse the result YAML string,
-/// and ensure the two YAML trees match. Users may define the default settings to be
-/// applied to these string modifications. Note however that these settings only apply
-/// to portions of the YAML that are modified by this class.
+/// and ensure the two YAML trees match, throwing an exception otherwise. Such a situation
+/// should be extremely rare, and should only occur with degenerate formatting.
+///
+/// Users may define the default settings to be applied to these string modifications.
+/// Note however that these settings only apply to portions of the YAML that are modified
+/// by this class.
 ///
 /// Most modification methods require the user to pass in an [Iterable<Object>] path that
 /// holds the keys/indices to navigate to the element. Key equality is performed via
@@ -104,7 +107,11 @@ abstract class YamlEditor {
   void removeIn(Iterable<Object> path);
 
   /// Appends [value] into the list at [listPath], only if the element at the given path
-  /// is a List. Takes an optional [style] parameter.
+  /// is a List.
+  ///
+  /// Users have the option of defining the indentation applied and whether
+  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
+  /// list of styling options, refer to the documentation for [YamlStyle].
   ///
   /// **Convenience Method**
   /// [addInList] is equivalent to [insertInList] with index = length.
@@ -112,7 +119,11 @@ abstract class YamlEditor {
       {YamlStyle yamlStyle});
 
   /// Prepends [value] into the list at [listPath], only if the element at the given path
-  /// is a List. Takes an optional [style] parameter.
+  /// is a List.
+  ///
+  /// Users have the option of defining the indentation applied and whether
+  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
+  /// list of styling options, refer to the documentation for [YamlStyle].
   ///
   /// **Convenience Method**
   /// [prependInList] is equivalent to [insertInList] with index = 0.
@@ -121,7 +132,10 @@ abstract class YamlEditor {
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list. [index] must be non-negative and no greater than the list's length.
-  /// Takes an optional [style] parameter.
+  ///
+  /// Users have the option of defining the indentation applied and whether
+  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
+  /// list of styling options, refer to the documentation for [YamlStyle].
   void insertInList(Iterable<Object> listPath, int index, Object value,
       {YamlStyle yamlStyle});
 
