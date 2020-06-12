@@ -54,8 +54,28 @@ void main() {
       });
     });
 
+    test('toString returns a nice string representation', () {
+      final sourceEdit = SourceEdit(1, 2, 'replacement string');
+      expect(sourceEdit.toString(),
+          equals('SourceEdit(1, 2, "replacement string")'));
+    });
+
+    group('hashCode', () {
+      test('returns same value for equal SourceEdits', () {
+        final sourceEdit1 = SourceEdit(1, 2, 'replacement string');
+        final sourceEdit2 = SourceEdit(1, 2, 'replacement string');
+        expect(sourceEdit1.hashCode, equals(sourceEdit2.hashCode));
+      });
+
+      test('returns different value for equal SourceEdits', () {
+        final sourceEdit1 = SourceEdit(1, 2, 'replacement string');
+        final sourceEdit2 = SourceEdit(1, 3, 'replacement string');
+        expect(sourceEdit1.hashCode == sourceEdit2.hashCode, equals(false));
+      });
+    });
+
     group('toJson', () {
-      test('is compatible with jsonEncode', () {
+      test('behaves as expected', () {
         final sourceEdit = SourceEdit(1, 2, 'replacement string');
         final sourceEditJson = sourceEdit.toJson();
 
