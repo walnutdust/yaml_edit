@@ -116,13 +116,13 @@ class TestCase {
   void performModification(YamlModification mod) {
     switch (mod.method) {
       case YamlModificationMethod.setIn:
-        yamlBuilder.setIn(mod.path, mod.value);
+        yamlBuilder.assign(mod.collectionPath, mod.keyOrIndex, mod.value);
         return;
       case YamlModificationMethod.removeIn:
-        yamlBuilder.removeIn(mod.path);
+        yamlBuilder.remove(mod.collectionPath, mod.keyOrIndex);
         return;
       case YamlModificationMethod.addIn:
-        yamlBuilder.addInList(mod.path, mod.value);
+        yamlBuilder.appendToList(mod.collectionPath, mod.value);
         return;
     }
   }
@@ -197,22 +197,25 @@ dynamic getValueFromYamlNode(YamlNode node) {
   }
 }
 
-/// Conversts the list of modifications from the raw input to
-/// [YamlModification] objects
+/// Converts the list of modifications from the raw input to [YamlModification] objects.
 List<YamlModification> parseModifications(List<dynamic> modifications) {
   return modifications.map((mod) {
-    var path;
     var value;
+    var keyOrIndex;
+    final method = getModificationMethod((mod[0] as String));
 
-    var method = getModificationMethod((mod[0] as String));
-    if (mod.length > 1) {
-      path = mod[1] as List;
-    }
-    if (mod.length > 2) {
+    final path = mod[1] as List;
+
+    if (method == YamlModificationMethod.addIn) {
       value = mod[2];
+    } else if (method == YamlModificationMethod.removeIn) {
+      keyOrIndex = mod[2];
+    } else if (method == YamlModificationMethod.setIn) {
+      keyOrIndex = mod[2];
+      value = mod[3];
     }
 
-    return YamlModification(method, path, value);
+    return YamlModification(method, path, keyOrIndex, value);
   }).toList();
 }
 
@@ -236,13 +239,16 @@ YamlModificationMethod getModificationMethod(String method) {
 /// Class representing an abstract YAML modification to be performed
 class YamlModification {
   final YamlModificationMethod method;
-  final List<dynamic> path;
+  final List<dynamic> collectionPath;
+  final dynamic keyOrIndex;
   final dynamic value;
 
-  YamlModification(this.method, this.path, this.value);
+  YamlModification(
+      this.method, this.collectionPath, this.keyOrIndex, this.value);
 
   @override
-  String toString() => 'method: $method, path: $path, value: $value';
+  String toString() =>
+      'method: $method, path: $collectionPath, keyOrIndex: $keyOrIndex, value: $value';
 }
 
 /// Enum to hold the possible modification methods.

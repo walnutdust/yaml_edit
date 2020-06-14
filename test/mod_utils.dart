@@ -10,7 +10,7 @@ Function() expectLoadPreservesYAML(String source) {
 
 /// Asserts that [builder] has the same internal value as [value].
 void expectYamlBuilderValue(YamlEditor builder, dynamic value) {
-  var builderValue = builder.parseValueAt([]);
+  var builderValue = builder.parseAt([]);
 
   // Equals creates a matcher that uses the equality defined in builderValue, so we have
   // to swap the expected/actual around.
