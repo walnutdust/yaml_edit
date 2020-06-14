@@ -64,6 +64,13 @@ recipe:
       expect(() => doc.parseAt(path), throwsA(isA<ArgumentError>()));
     });
 
+    test('throws ArgumentError if path tries to go deeper into a scalar', () {
+      final doc = YamlEditor('{a: 4}');
+      final path = ['a', 'b'];
+
+      expect(() => doc.parseAt(path), throwsA(isA<ArgumentError>()));
+    });
+
     test('throws ArgumentError if index is out of bounds', () {
       final doc = YamlEditor('[0,1]');
       final path = [2];
@@ -292,6 +299,14 @@ d: 4
 
     test('simple flow map', () {
       final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
+      doc.assign([], 'YAML', 'hi');
+
+      expect(doc.toString(), equals('{YAML: hi}'));
+      expectYamlBuilderValue(doc, {'YAML': 'hi'});
+    });
+
+    test('simple flow map (2)', () {
+      final doc = YamlEditor('{}');
       doc.assign([], 'YAML', 'hi');
 
       expect(doc.toString(), equals('{YAML: hi}'));
@@ -794,9 +809,9 @@ c: 3
 
     test('simple flow list (2)', () {
       final doc = YamlEditor('[1, "b", "c"]');
-      doc.remove([], 1);
-      expect(doc.toString(), equals('[1, "c"]'));
-      expectYamlBuilderValue(doc, [1, 'c']);
+      doc.remove([], 0);
+      expect(doc.toString(), equals('[ "b", "c"]'));
+      expectYamlBuilderValue(doc, ['b', 'c']);
     });
 
     test('simple flow list (3)', () {
@@ -983,6 +998,26 @@ c: 3
       expectYamlBuilderValue(doc, [0, 1, 2]);
     });
 
+    test('simple block list (4)', () {
+      final doc = YamlEditor('''
+- 1
+- 2
+''');
+      doc.prependToList([], [4, 5, 6]);
+      expect(doc.toString(), equals('''
+- - 4
+  - 5
+  - 6
+- 1
+- 2
+'''));
+      expectYamlBuilderValue(doc, [
+        [4, 5, 6],
+        1,
+        2
+      ]);
+    });
+
     test('simple block list with comments ', () {
       final doc = YamlEditor('''
 # comments
@@ -1104,6 +1139,26 @@ a: # comments
 - 3
 '''));
       expectYamlBuilderValue(doc, [1, 2, 3]);
+    });
+
+    test('simple block list (3)', () {
+      final doc = YamlEditor('''
+- 1
+- 3
+''');
+      doc.insertIntoList([], 1, [4, 5, 6]);
+      expect(doc.toString(), equals('''
+- 1
+- - 4
+  - 5
+  - 6
+- 3
+'''));
+      expectYamlBuilderValue(doc, [
+        1,
+        [4, 5, 6],
+        3
+      ]);
     });
 
     test('simple block list with comments', () {

@@ -1,4 +1,3 @@
-import 'package:yaml/src/equality.dart';
 import 'package:yaml/yaml.dart';
 
 import './source_edit.dart';
@@ -36,7 +35,7 @@ SourceEdit removeInList(String yaml, YamlList list, int index) {
 ///
 /// Returns `true` if [elem] was successfully found and removed, `false` otherwise.
 SourceEdit removeFromList(String yaml, YamlList list, Object elem) {
-  var index = indexOf(list, elem);
+  var index = list.indexOf(elem);
   if (index == -1) return null;
 
   return removeInList(yaml, list, index);
@@ -85,6 +84,7 @@ SourceEdit insertInList(
 int getListIndentation(String yaml, YamlList list) {
   if (list.style == CollectionStyle.FLOW) return 0;
 
+  /// An empty block map doesn't really exist.
   if (list.nodes.isEmpty) {
     throw UnsupportedError('Unable to get indentation for empty block list');
   }
@@ -135,14 +135,6 @@ SourceEdit removeFromBlockList(
   if (end == -1) end = yaml.length;
 
   return SourceEdit(start, end - start, '');
-}
-
-/// Returns the index of [element] in the list if present, or -1 if it is absent.
-int indexOf(YamlList list, Object element) {
-  for (var i = 0; i < list.length; i++) {
-    if (deepEquals(list[i].value, element)) return i;
-  }
-  return -1;
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of prepending

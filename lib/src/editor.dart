@@ -422,7 +422,8 @@ class YamlStringEditor implements YamlEditor {
   ///
   /// When [_yaml] is modified with this method, the resulting string is parsed
   /// and reloaded and traversed down [path] to ensure that the reparsed node is
-  /// equal to [expectedNode] using `package:yaml`'s deep equality.
+  /// equal to [expectedNode] using `package:yaml`'s deep equality. Throws an
+  /// [AssertionError] if the two trees do not match.
   void _performEdit(
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
     _yaml = edit.apply(_yaml);
@@ -430,7 +431,7 @@ class YamlStringEditor implements YamlEditor {
     final actualNode = parseAt(path);
 
     if (!deepEquals(actualNode, expectedNode)) {
-      throw Exception('''
+      throw AssertionError('''
 Modification did not result in expected result! 
 Obtained: 
 $actualNode

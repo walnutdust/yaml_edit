@@ -17,7 +17,7 @@ SourceEdit setInMap(
     }
   } else {
     if (map.style == CollectionStyle.FLOW) {
-      return _replaceInFlowMap(yaml, map, key, newValue, style);
+      return replaceInFlowMap(yaml, map, key, newValue, style);
     } else {
       return replaceInBlockMap(yaml, map, key, newValue, style);
     }
@@ -52,6 +52,7 @@ YamlNode getKeyNode(YamlMap map, Object key) {
 int getMapIndentation(String yaml, YamlMap map) {
   if (map.style == CollectionStyle.FLOW) return 0;
 
+  /// An empty block map doesn't really exist.
   if (map.nodes.isEmpty) {
     throw UnsupportedError('Unable to get indentation for empty block list');
   }
@@ -127,7 +128,7 @@ SourceEdit addToBlockMap(
 /// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
 /// flow map.
 
-SourceEdit _replaceInFlowMap(
+SourceEdit replaceInFlowMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final valueSpan = map.nodes[key].span;
   var valueString = getFlowString(newValue);
