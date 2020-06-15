@@ -451,6 +451,16 @@ true: 'true'
       expectYamlBuilderValue(doc, ['hi']);
     });
 
+    test('simple flow list (2)', () {
+      final doc = YamlEditor("[YAML Ain't Markup Language]");
+      doc.assign([0], [1, 2, 3]);
+
+      expect(doc.toString(), equals('[[1, 2, 3]]'));
+      expectYamlBuilderValue(doc, [
+        [1, 2, 3]
+      ]);
+    });
+
     test('simple flow list with spacing', () {
       final doc = YamlEditor("[ YAML Ain't Markup Language ]");
       doc.assign([0], 'hi');

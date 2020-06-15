@@ -268,7 +268,7 @@ class YamlStringEditor implements YamlEditor {
     style ??= defaultStyle;
 
     if (parentNode is YamlList) {
-      edit = setInList(_yaml, parentNode, keyOrIndex, value, style);
+      edit = assignInList(_yaml, parentNode, keyOrIndex, value, style);
       expectedNode =
           updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
     } else if (parentNode is YamlMap) {
@@ -431,15 +431,13 @@ class YamlStringEditor implements YamlEditor {
     _yaml = edit.apply(_yaml);
     final actualTree = loadYamlNode(_yaml);
 
-    final actualNode = parseAt(path);
-
     if (!deepEquals(actualTree, expectedTree)) {
       throw AssertionError('''
 Modification did not result in expected result! 
 Obtained: 
-$actualNode
+$actualTree
 Expected: 
-$expectedNode''');
+$expectedTree''');
     }
 
     _contents = actualTree;

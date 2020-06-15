@@ -81,9 +81,17 @@ String getBlockString(Object value,
 /// meaningful content happens)
 int getContentSensitiveEnd(YamlNode yamlNode) {
   if (yamlNode is YamlList) {
-    return getContentSensitiveEnd(yamlNode.nodes.last);
+    if (yamlNode.style == CollectionStyle.FLOW) {
+      return getContentSensitiveEnd(yamlNode.nodes.last) + 1;
+    } else {
+      return getContentSensitiveEnd(yamlNode.nodes.last);
+    }
   } else if (yamlNode is YamlMap) {
-    return getContentSensitiveEnd(yamlNode.nodes.values.last);
+    if (yamlNode.style == CollectionStyle.FLOW) {
+      return getContentSensitiveEnd(yamlNode.nodes.values.last) + 1;
+    } else {
+      return getContentSensitiveEnd(yamlNode.nodes.values.last);
+    }
   }
 
   return yamlNode.span.end.offset;

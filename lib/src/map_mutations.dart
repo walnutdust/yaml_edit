@@ -11,15 +11,15 @@ SourceEdit setInMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   if (!map.nodes.containsKey(key)) {
     if (map.style == CollectionStyle.FLOW) {
-      return addToFlowMap(yaml, map, key, newValue, style);
+      return _addToFlowMap(yaml, map, key, newValue, style);
     } else {
-      return addToBlockMap(yaml, map, key, newValue, style);
+      return _addToBlockMap(yaml, map, key, newValue, style);
     }
   } else {
     if (map.style == CollectionStyle.FLOW) {
-      return replaceInFlowMap(yaml, map, key, newValue, style);
+      return _replaceInFlowMap(yaml, map, key, newValue, style);
     } else {
-      return replaceInBlockMap(yaml, map, key, newValue, style);
+      return _replaceInBlockMap(yaml, map, key, newValue, style);
     }
   }
 }
@@ -35,9 +35,9 @@ SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
   final valueNode = map.nodes[key];
 
   if (map.style == CollectionStyle.FLOW) {
-    return removeFromFlowMap(yaml, map, keyNode, valueNode);
+    return _removeFromFlowMap(yaml, map, keyNode, valueNode);
   } else {
-    return removeFromBlockMap(yaml, map, keyNode, valueNode);
+    return _removeFromBlockMap(yaml, map, keyNode, valueNode);
   }
 }
 
@@ -86,7 +86,7 @@ YamlMap updatedYamlMap(YamlMap map, Function(Map<dynamic, YamlNode>) update) {
 
 /// Performs the string operation on [yaml] to achieve the effect of adding
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a flow map.
-SourceEdit addToFlowMap(
+SourceEdit _addToFlowMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final keyString = getFlowString(key);
   final valueString = getFlowString(newValue);
@@ -101,7 +101,7 @@ SourceEdit addToFlowMap(
 
 /// Performs the string operation on [yaml] to achieve the effect of adding
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a block map.
-SourceEdit addToBlockMap(
+SourceEdit _addToBlockMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final keyString = getFlowString(key);
   final valueString = getBlockString(
@@ -131,8 +131,7 @@ SourceEdit addToBlockMap(
 /// Performs the string operation on [yaml] to achieve the effect of replacing
 /// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
 /// flow map.
-
-SourceEdit replaceInFlowMap(
+SourceEdit _replaceInFlowMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final valueSpan = map.nodes[key].span;
   var valueString = getFlowString(newValue);
@@ -146,7 +145,7 @@ SourceEdit replaceInFlowMap(
 /// Performs the string operation on [yaml] to achieve the effect of replacing
 /// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
 /// block map.
-SourceEdit replaceInBlockMap(
+SourceEdit _replaceInBlockMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final value = map.nodes[key];
   final keyNode = getKeyNode(map, key);
@@ -164,7 +163,7 @@ SourceEdit replaceInBlockMap(
 
 /// Performs the string operation on [yaml] to achieve the effect of removing
 /// the [key] from the map, bearing in mind that this is a flow map.
-SourceEdit removeFromFlowMap(
+SourceEdit _removeFromFlowMap(
     String yaml, YamlMap map, YamlNode keyNode, YamlNode valueNode) {
   final keySpan = keyNode.span;
   final valueSpan = valueNode.span;
@@ -183,7 +182,7 @@ SourceEdit removeFromFlowMap(
 
 /// Performs the string operation on [yaml] to achieve the effect of removing
 /// the [key] from the map, bearing in mind that this is a block map.
-SourceEdit removeFromBlockMap(
+SourceEdit _removeFromBlockMap(
     String yaml, YamlMap map, YamlNode keyNode, YamlNode valueNode) {
   var keySpan = keyNode.span;
   var valueSpan = valueNode.span;
