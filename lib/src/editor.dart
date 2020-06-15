@@ -68,8 +68,7 @@ abstract class YamlEditor {
   /// Users have the option of defining the indentation applied and whether
   /// flow structures will be applied via the optional parameter [style]. For a comprehensive
   /// list of styling options, refer to the documentation for [YamlStyle].
-  void assign(Iterable<Object> collectionPath, Object keyOrIndex, Object value,
-      {YamlStyle style});
+  void assign(Iterable<Object> path, Object value, {YamlStyle style});
 
   /// Appends [value] into the list at [listPath]. If the element at the given path is not a [YamlList],
   /// an [ArgumentError] will be thrown.
@@ -101,10 +100,10 @@ abstract class YamlEditor {
   void insertIntoList(Iterable<Object> listPath, int index, Object value,
       {YamlStyle style});
 
-  /// Removes the node at [keyOrIndex] in the collection at [collectionPath].
+  /// Removes the node at [path].
   ///
-  /// Throws [ArgumentError] if the element at [path] is not a [YamlMap] or a [YamlList].
-  YamlNode remove(Iterable<Object> collectionPath, Object keyOrIndex);
+  /// Throws [ArgumentError] if [path] is invalid.
+  YamlNode remove(Iterable<Object> path);
 }
 
 /// A concrete implementation of [YamlEditor] that uses string manipulation to effect the underlying
@@ -220,9 +219,8 @@ class YamlStringEditor implements YamlEditor {
   /// Note that [assign] provides a different result as compared to a [remove] followed by an
   /// [insertIntoList], because it preserves comments at the same level.
   ///
-  /// Throws an [ArgumentError] if no node exists at [path] or if the node at [path] is a [YamlScalar],
-  /// and throws the usual Dart errors otherwise (e.g. [RangeError] if [keyOrIndex] is negative or longer
-  /// than list length).
+  /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
+  /// [RangeError] if [keyOrIndex] is negative or longer than list length).
   ///
   /// Users have the option of defining the indentation applied and whether
   /// flow structures will be applied via the optional parameter [style]. For a comprehensive
@@ -257,8 +255,9 @@ class YamlStringEditor implements YamlEditor {
   ///   - 2
   /// '''
   @override
-  void assign(Iterable<Object> collectionPath, Object keyOrIndex, Object value,
-      {YamlStyle style}) {
+  void assign(Iterable<Object> path, Object value, {YamlStyle style}) {
+    final collectionPath = path.take(path.length - 1);
+    final keyOrIndex = path.isNotEmpty ? path.last : null;
     final parentNode = parseAt(collectionPath);
 
     var edit;
@@ -333,11 +332,13 @@ class YamlStringEditor implements YamlEditor {
     _performEdit(edit, listPath, expectedList);
   }
 
-  /// Removes the node at [keyOrIndex] in the collection at [collectionPath].
+  /// Removes the node at [path].
   ///
-  /// Throws [ArgumentError] if the element at [path] is not a [YamlMap] or a [YamlList].
+  /// Throws [ArgumentError] if [path] is invalid.
   @override
-  YamlNode remove(Iterable<Object> collectionPath, Object keyOrIndex) {
+  YamlNode remove(Iterable<Object> path) {
+    final collectionPath = path.take(path.length - 1);
+    final keyOrIndex = path.isNotEmpty ? path.last : null;
     final parentNode = parseAt(collectionPath);
 
     var edit;

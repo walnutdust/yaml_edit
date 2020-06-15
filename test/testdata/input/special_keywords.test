@@ -5,7 +5,7 @@ false: false
 No: No
 true: true
 ---
-- [set, [], null, tilde]
-- [set, [], false, false]
-- [set, [], No, no]
-- [set, [], true, True]
+- [assign, [null], tilde]
+- [assign, [false], false]
+- [assign, [No], no]
+- [assign, [true], True]

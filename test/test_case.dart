@@ -115,14 +115,14 @@ class TestCase {
 
   void performModification(YamlModification mod) {
     switch (mod.method) {
-      case YamlModificationMethod.setIn:
-        yamlBuilder.assign(mod.collectionPath, mod.keyOrIndex, mod.value);
+      case YamlModificationMethod.assign:
+        yamlBuilder.assign(mod.path, mod.value);
         return;
-      case YamlModificationMethod.removeIn:
-        yamlBuilder.remove(mod.collectionPath, mod.keyOrIndex);
+      case YamlModificationMethod.remove:
+        yamlBuilder.remove(mod.path);
         return;
-      case YamlModificationMethod.addIn:
-        yamlBuilder.appendToList(mod.collectionPath, mod.value);
+      case YamlModificationMethod.appendTo:
+        yamlBuilder.appendToList(mod.path, mod.value);
         return;
     }
   }
@@ -206,13 +206,10 @@ List<YamlModification> parseModifications(List<dynamic> modifications) {
 
     final path = mod[1] as List;
 
-    if (method == YamlModificationMethod.addIn) {
+    if (method == YamlModificationMethod.appendTo) {
       value = mod[2];
-    } else if (method == YamlModificationMethod.removeIn) {
-      keyOrIndex = mod[2];
-    } else if (method == YamlModificationMethod.setIn) {
-      keyOrIndex = mod[2];
-      value = mod[3];
+    } else if (method == YamlModificationMethod.assign) {
+      value = mod[2];
     }
 
     return YamlModification(method, path, keyOrIndex, value);
@@ -222,15 +219,13 @@ List<YamlModification> parseModifications(List<dynamic> modifications) {
 /// Gets the YAML modification method corresponding to [method]
 YamlModificationMethod getModificationMethod(String method) {
   switch (method) {
-    case 'set':
-    case 'setIn':
-      return YamlModificationMethod.setIn;
+    case 'assign':
+      return YamlModificationMethod.assign;
     case 'remove':
-    case 'removeIn':
-      return YamlModificationMethod.removeIn;
-    case 'add':
-    case 'addIn':
-      return YamlModificationMethod.addIn;
+      return YamlModificationMethod.remove;
+    case 'append':
+    case 'appendTo':
+      return YamlModificationMethod.appendTo;
     default:
       throw Exception('$method not recognized!');
   }
@@ -239,17 +234,16 @@ YamlModificationMethod getModificationMethod(String method) {
 /// Class representing an abstract YAML modification to be performed
 class YamlModification {
   final YamlModificationMethod method;
-  final List<dynamic> collectionPath;
+  final List<dynamic> path;
   final dynamic keyOrIndex;
   final dynamic value;
 
-  YamlModification(
-      this.method, this.collectionPath, this.keyOrIndex, this.value);
+  YamlModification(this.method, this.path, this.keyOrIndex, this.value);
 
   @override
   String toString() =>
-      'method: $method, path: $collectionPath, keyOrIndex: $keyOrIndex, value: $value';
+      'method: $method, path: $path, keyOrIndex: $keyOrIndex, value: $value';
 }
 
 /// Enum to hold the possible modification methods.
-enum YamlModificationMethod { addIn, setIn, removeIn }
+enum YamlModificationMethod { appendTo, assign, remove }

@@ -5,5 +5,5 @@ BASIC LIST TEST - Ensures that the basic list operations work.
 - 2
 - 3
 ---
-- [remove, [], 1]
-- [add, [], 4]
+- [remove, [1]]
+- [append, [], 4]
