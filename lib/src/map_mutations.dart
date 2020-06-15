@@ -60,7 +60,7 @@ int getMapIndentation(String yaml, YamlMap map) {
   final lastKey = map.nodes.keys.last as YamlNode;
   final lastSpanOffset = lastKey.span.start.offset;
   var lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
-  if (lastNewLine == -1) lastNewLine = 0;
+  if (lastNewLine == -1) return lastSpanOffset;
 
   return lastSpanOffset - lastNewLine - 1;
 }

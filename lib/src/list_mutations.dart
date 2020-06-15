@@ -13,7 +13,12 @@ SourceEdit setInList(
   final offset = currValue.span.start.offset;
   final length = currValue.span.end.offset - offset;
 
-  return SourceEdit(offset, length, newValue.toString());
+  var valueString = getBlockString(
+      newValue, getListIndentation(yaml, list) + style.indentationStep);
+
+  if (isCollection(newValue)) valueString = '\n' + valueString;
+
+  return SourceEdit(offset, length, valueString);
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of removing
@@ -91,8 +96,9 @@ int getListIndentation(String yaml, YamlList list) {
 
   final lastSpanOffset = list.nodes.last.span.start.offset;
   var lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
-  if (lastNewLine == -1) lastNewLine = 0;
   final lastHyphen = yaml.lastIndexOf('-', lastSpanOffset);
+
+  if (lastNewLine == -1) return lastHyphen;
 
   return lastHyphen - lastNewLine - 1;
 }
@@ -196,14 +202,13 @@ SourceEdit insertInBlockList(
   }
   if (index == 0) return prependToBlockList(yaml, list, elem, style);
 
-  final valueString = getBlockString(
-      elem, getListIndentation(yaml, list) + style.indentationStep);
-  var formattedValue = ''.padLeft(getListIndentation(yaml, list)) + '- ';
+  final finalIndentation =
+      getListIndentation(yaml, list) + style.indentationStep;
+  final valueString = getBlockString(elem, finalIndentation);
+  var formattedValue = ' ' * getListIndentation(yaml, list) + '- ';
 
   if (isCollection(elem)) {
-    formattedValue += valueString
-            .substring(getListIndentation(yaml, list) + style.indentationStep) +
-        '\n';
+    formattedValue += '\n$valueString\n';
   } else {
     formattedValue += valueString + '\n';
   }

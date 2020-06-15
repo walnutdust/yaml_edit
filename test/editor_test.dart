@@ -232,6 +232,25 @@ c: 3
       expectYamlBuilderValue(doc, {'YAML': 'hi'});
     });
 
+    test('nested structure in simple block map', () {
+      final doc = YamlEditor("YAML: YAML Ain't Markup Language");
+      doc.assign(
+          [],
+          'YAML',
+          {
+            'YAML': {'YAML': "YAML Ain't Markup Language"}
+          });
+
+      expect(doc.toString(), equals('''YAML: 
+  YAML:
+    YAML: YAML Ain't Markup Language'''));
+      expectYamlBuilderValue(doc, {
+        'YAML': {
+          'YAML': {'YAML': "YAML Ain't Markup Language"}
+        }
+      });
+    });
+
     test('simple block map with comment', () {
       final doc = YamlEditor("YAML: YAML Ain't Markup Language # comment");
       doc.assign([], 'YAML', 'hi');
@@ -240,7 +259,7 @@ c: 3
       expectYamlBuilderValue(doc, {'YAML': 'hi'});
     });
 
-    test('simple block map ', () {
+    test('simple block map (2) ', () {
       final doc = YamlEditor('''
 a: 1
 b: 2
@@ -256,7 +275,7 @@ d: 4
       expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
     });
 
-    test('simple block map (2)', () {
+    test('simple block map (3)', () {
       final doc = YamlEditor('''
 a: 1
 ''');
@@ -268,7 +287,7 @@ b: 2
       expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
     });
 
-    test('simple block map (3)', () {
+    test('simple block map (4)', () {
       final doc = YamlEditor('a: 1');
       doc.assign([], 'b', 2);
       expect(doc.toString(), equals('''a: 1
@@ -343,6 +362,16 @@ d: 4
 
       expect(doc.toString(), equals('- hi'));
       expectYamlBuilderValue(doc, ['hi']);
+    });
+
+    test('simple block list (2)', () {
+      final doc = YamlEditor("- YAML Ain't Markup Language");
+      doc.assign([], 0, [1, 2]);
+
+      expect(doc.toString(), equals('- \n  - 1\n  - 2'));
+      expectYamlBuilderValue(doc, [
+        [1, 2]
+      ]);
     });
 
     test('simple block list with comment', () {
@@ -1141,7 +1170,7 @@ a: # comments
       expectYamlBuilderValue(doc, [1, 2, 3]);
     });
 
-    test('simple block list (3)', () {
+    test('simple block list (4)', () {
       final doc = YamlEditor('''
 - 1
 - 3
@@ -1149,7 +1178,8 @@ a: # comments
       doc.insertIntoList([], 1, [4, 5, 6]);
       expect(doc.toString(), equals('''
 - 1
-- - 4
+- 
+  - 4
   - 5
   - 6
 - 3

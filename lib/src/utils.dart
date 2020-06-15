@@ -15,8 +15,9 @@ String getFlowString(Object value) {
 }
 
 /// Returns values as strings representing block objects.
-// We do a join('\n') rather than having it in the mapping to avoid
-// adding additional spaces when updating rather than adding elements.
+///
+/// We do a join('\n') rather than having it in the mapping to avoid
+/// adding additional spaces when updating rather than adding elements.
 String getBlockString(Object value,
     [int indentation = 0, int additionalIndentation = 2]) {
   if (value is List) {
