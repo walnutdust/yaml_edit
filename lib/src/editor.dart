@@ -427,11 +427,13 @@ class YamlStringEditor implements YamlEditor {
   /// [AssertionError] if the two trees do not match.
   void _performEdit(
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
+    final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
-    _contents = loadYamlNode(_yaml);
+    final actualTree = loadYamlNode(_yaml);
+
     final actualNode = parseAt(path);
 
-    if (!deepEquals(actualNode, expectedNode)) {
+    if (!deepEquals(actualTree, expectedTree)) {
       throw AssertionError('''
 Modification did not result in expected result! 
 Obtained: 
@@ -440,6 +442,42 @@ Expected:
 $expectedNode''');
     }
 
+    _contents = actualTree;
     _edits.add(edit);
+  }
+
+  /// Utility method to produce an updated YAML tree equivalent to converting the [YamlNode]
+  /// at [path] to be [expectedNode].
+  ///
+  /// [SourceSpan]s in this new tree are not guaranteed to be accurate.
+  YamlNode _deepModify(
+      YamlNode tree, Iterable<Object> path, YamlNode expectedNode) {
+    if (path.isEmpty) {
+      return expectedNode;
+    }
+
+    final nextPath = path.skip(1);
+
+    if (tree is YamlList) {
+      final index = path.first;
+
+      if (!isValidIndex(index, tree.length)) {
+        throw ArgumentError('List $tree does not take index $index');
+      }
+
+      return updatedYamlList(
+          tree,
+          (nodes) =>
+              nodes[index] = _deepModify(nodes[index], nextPath, expectedNode));
+    } else if (tree is YamlMap) {
+      final key = path.first;
+      final keyNode = yamlNodeFrom(key);
+      return updatedYamlMap(
+          tree,
+          (nodes) => nodes[keyNode] =
+              _deepModify(nodes[keyNode], nextPath, expectedNode));
+    } else {
+      throw ArgumentError('Unable to perform _deepModify on scalar $tree');
+    }
   }
 }
