@@ -1,0 +1,11 @@
+SPECIAL KEYWORDS 
+---
+~: null
+false: false
+No: No
+true: true
+---
+- [set, [], null, tilde]
+- [set, [], false, false]
+- [set, [], No, no]
+- [set, [], true, True]

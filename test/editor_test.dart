@@ -35,6 +35,7 @@ void main() {
       home run record in 1998.'''));
     test('tilde', expectLoadPreservesYAML('~'));
     test('false', expectLoadPreservesYAML('false'));
+
     test('block map', expectLoadPreservesYAML('''a: 
     b: 1
     '''));
@@ -330,6 +331,51 @@ d: 4
 
       expect(doc.toString(), equals('{YAML: hi}'));
       expectYamlBuilderValue(doc, {'YAML': 'hi'});
+    });
+
+    test('simple flow map (3)', () {
+      final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
+      doc.assign([], 'XML', 'Extensible Markup Language');
+
+      expect(
+          doc.toString(),
+          equals(
+              "{YAML: YAML Ain't Markup Language, XML: Extensible Markup Language}"));
+      expectYamlBuilderValue(doc, {
+        'YAML': "YAML Ain't Markup Language",
+        'XML': 'Extensible Markup Language'
+      });
+    });
+
+    test('simple flow map (4)', () {
+      final doc = YamlEditor('{No: No}');
+      doc.assign([], 'false', 'false');
+
+      expect(doc.toString(), equals("{No: No, 'false': 'false'}"));
+      expectYamlBuilderValue(doc, {'No': 'No', 'false': 'false'});
+    });
+
+    test('simple flow map (5)', () {
+      final doc = YamlEditor('''
+~: null
+false: false
+No: No
+true: true
+''');
+      doc.assign([], null, 'tilde');
+      doc.assign([], false, false);
+      doc.assign([], 'No', 'no');
+      doc.assign([], true, 'true');
+
+      expect(doc.toString(), equals('''
+~: tilde
+false: false
+No: no
+true: 'true'
+'''));
+
+      expectYamlBuilderValue(
+          doc, {null: 'tilde', false: false, 'No': 'no', true: 'true'});
     });
 
     test('simple flow map with spacing', () {

@@ -23,8 +23,6 @@ SourceEdit setInList(
 
 /// Performs the string operation on [yaml] to achieve the effect of removing
 /// the element at [index] when re-parsed.
-///
-/// Returns the node that is removed.
 SourceEdit removeInList(String yaml, YamlList list, int index) {
   final nodeToRemove = list.nodes[index];
 
@@ -33,17 +31,6 @@ SourceEdit removeInList(String yaml, YamlList list, int index) {
   } else {
     return removeFromBlockList(yaml, list, nodeToRemove, index);
   }
-}
-
-/// Performs the string operation on [yaml] to achieve the effect of
-/// removing [elem] when re-parsed.
-///
-/// Returns `true` if [elem] was successfully found and removed, `false` otherwise.
-SourceEdit removeFromList(String yaml, YamlList list, Object elem) {
-  var index = list.indexOf(elem);
-  if (index == -1) return null;
-
-  return removeInList(yaml, list, index);
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of

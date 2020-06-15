@@ -88,11 +88,14 @@ YamlMap updatedYamlMap(YamlMap map, Function(Map<dynamic, YamlNode>) update) {
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a flow map.
 SourceEdit addToFlowMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
+  final keyString = getFlowString(key);
+  final valueString = getFlowString(newValue);
+
   // The -1 accounts for the closing bracket.
   if (map.nodes.isEmpty) {
-    return SourceEdit(map.span.end.offset - 1, 0, '$key: $newValue');
+    return SourceEdit(map.span.end.offset - 1, 0, '$keyString: $valueString');
   } else {
-    return SourceEdit(map.span.end.offset - 1, 0, ', $key: $newValue');
+    return SourceEdit(map.span.end.offset - 1, 0, ', $keyString: $valueString');
   }
 }
 
@@ -100,9 +103,10 @@ SourceEdit addToFlowMap(
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a block map.
 SourceEdit addToBlockMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
+  final keyString = getFlowString(key);
   final valueString = getBlockString(
       newValue, getMapIndentation(yaml, map) + style.indentationStep);
-  var formattedValue = ' ' * getMapIndentation(yaml, map) + '$key: ';
+  var formattedValue = ' ' * getMapIndentation(yaml, map) + '$keyString: ';
   var offset = map.span.end.offset;
 
   // Adjusts offset to after the trailing newline of the last entry, if it exists

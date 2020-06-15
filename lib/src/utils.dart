@@ -1,17 +1,58 @@
 import 'package:yaml/yaml.dart';
 
+/// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
+/// `false` otherwise.
+bool isPossibleBoolean(String input) {
+  final trimmedInput = input.trim();
+
+  switch (trimmedInput) {
+    case 'true':
+    case 'True':
+    case 'TRUE':
+    case 'false':
+    case 'False':
+    case 'FALSE':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// Returns `true` if [input] could be interpreted as a null value by `package:yaml`,
+/// `false` otherwise.
+bool isPossibleNull(String input) {
+  final trimmedInput = input.trim();
+
+  switch (trimmedInput) {
+    case '':
+    case 'null':
+    case 'Null':
+    case 'NULL':
+    case '~':
+      return true;
+    default:
+      return false;
+  }
+}
+
 /// Returns a safe string by checking for strings that begin with > or |
-String getSafeString(String string) {
-  if (string.startsWith('>') || string.startsWith('|')) {
-    return '\'$string\'';
+/// as well as strings that can be interpreted as boolean
+String getSafeString(Object value) {
+  if (value is String) {
+    if (value.startsWith('>') ||
+        value.startsWith('|') ||
+        isPossibleBoolean(value) ||
+        isPossibleNull(value)) {
+      return '\'$value\'';
+    }
   }
 
-  return string;
+  return value.toString();
 }
 
 /// Returns values as strings representing flow objects.
 String getFlowString(Object value) {
-  return getSafeString(value.toString());
+  return getSafeString(value);
 }
 
 /// Returns values as strings representing block objects.
@@ -33,7 +74,7 @@ String getBlockString(Object value,
     }).join('\n');
   }
 
-  return getSafeString(value.toString());
+  return getSafeString(value);
 }
 
 /// Returns the content sensitive ending offset of a node (i.e. where the last
@@ -53,7 +94,9 @@ bool isCollection(Object item) => item is Map || item is List;
 
 /// Wraps [value] into a [YamlNode].
 YamlNode yamlNodeFrom(Object value) {
-  if (value is Map) {
+  if (value is YamlNode) {
+    return value;
+  } else if (value is Map) {
     return YamlMap.wrap(value);
   } else if (value is List) {
     return YamlList.wrap(value);
