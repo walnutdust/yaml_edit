@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:yaml/src/equality.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
 /// Asserts that a string containing a single YAML document is unchanged
@@ -12,7 +13,5 @@ Function() expectLoadPreservesYAML(String source) {
 void expectYamlBuilderValue(YamlEditor builder, dynamic value) {
   var builderValue = builder.parseAt([]);
 
-  // Equals creates a matcher that uses the equality defined in builderValue, so we have
-  // to swap the expected/actual around.
-  expect(value, equals(builderValue));
+  expect(builderValue.value, equals(value));
 }

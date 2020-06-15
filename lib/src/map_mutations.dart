@@ -184,13 +184,16 @@ SourceEdit _removeFromFlowMap(
 /// the [key] from the map, bearing in mind that this is a block map.
 SourceEdit _removeFromBlockMap(
     String yaml, YamlMap map, YamlNode keyNode, YamlNode valueNode) {
-  var keySpan = keyNode.span;
-  var valueSpan = valueNode.span;
-  var start = yaml.lastIndexOf('\n', keySpan.start.offset);
-  var end = yaml.indexOf('\n', valueSpan.end.offset);
+  final keySpan = keyNode.span;
+  final end = getContentSensitiveEnd(valueNode);
 
-  if (start == -1) start = 0;
-  if (end == -1) end = yaml.length - 1;
+  if (map.length == 1) {
+    final start = map.span.start.offset;
 
-  return SourceEdit(start, end - start, '');
+    return SourceEdit(start, end - start, '{}');
+  } else {
+    var start = yaml.lastIndexOf('\n', keySpan.start.offset);
+    if (start == -1) start = 0;
+    return SourceEdit(start, end - start, '');
+  }
 }

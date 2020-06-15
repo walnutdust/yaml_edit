@@ -256,8 +256,16 @@ class YamlStringEditor implements YamlEditor {
   /// '''
   @override
   void assign(Iterable<Object> path, Object value, {YamlStyle style}) {
+    if (path.isEmpty) {
+      final end = getContentSensitiveEnd(_contents);
+      final edit = SourceEdit(0, end, getFlowString(value));
+
+      _performEdit(edit, path, yamlNodeFrom(value));
+      return;
+    }
+
     final collectionPath = path.take(path.length - 1);
-    final keyOrIndex = path.isNotEmpty ? path.last : null;
+    final keyOrIndex = path.last;
     final parentNode = parseAt(collectionPath);
 
     var edit;
@@ -337,39 +345,34 @@ class YamlStringEditor implements YamlEditor {
   /// Throws [ArgumentError] if [path] is invalid.
   @override
   YamlNode remove(Iterable<Object> path) {
-    final collectionPath = path.take(path.length - 1);
-    final keyOrIndex = path.isNotEmpty ? path.last : null;
-    final parentNode = parseAt(collectionPath);
-
     var edit;
     var expectedNode;
-    var nodeToRemove;
+    var nodeToRemove = parseAt(path);
 
-    if (parentNode is YamlList) {
-      if (isValidIndex(keyOrIndex, parentNode.length)) {
-        nodeToRemove = parentNode.nodes[keyOrIndex];
+    if (path.isEmpty) {
+      expectedNode = null;
+      edit = SourceEdit(0, _yaml.length, '');
+
+      _performEdit(edit, path, expectedNode);
+    } else {
+      final collectionPath = path.take(path.length - 1);
+      final keyOrIndex = path.last;
+      final parentNode = parseAt(collectionPath);
+
+      if (parentNode is YamlList) {
         edit = removeInList(_yaml, parentNode, keyOrIndex);
         expectedNode =
             updatedYamlList(parentNode, (nodes) => nodes.removeAt(keyOrIndex));
-      } else {
-        throw ArgumentError('List $parentNode does not take index $keyOrIndex');
-      }
-    } else if (parentNode is YamlMap) {
-      if (parentNode.containsKey(keyOrIndex)) {
-        nodeToRemove = parentNode.nodes[keyOrIndex];
+      } else if (parentNode is YamlMap) {
         edit = removeInMap(_yaml, parentNode, keyOrIndex);
 
         final keyNode = getKeyNode(parentNode, keyOrIndex);
         expectedNode =
             updatedYamlMap(parentNode, (nodes) => nodes.remove(keyNode));
-      } else {
-        throw ArgumentError('Map $parentNode does not have key $keyOrIndex');
       }
-    } else {
-      throw ArgumentError('$collectionPath does not point to a collection!');
-    }
 
-    _performEdit(edit, collectionPath, expectedNode);
+      _performEdit(edit, collectionPath, expectedNode);
+    }
 
     return nodeToRemove;
   }
@@ -377,6 +380,10 @@ class YamlStringEditor implements YamlEditor {
   /// Traverses down [path] to return the [YamlNode] at [path] if successful, throwing an
   /// [ArgumentError] otherwise.
   YamlNode _traverse(Iterable<Object> path) {
+    if (path.isEmpty) {
+      return _contents;
+    }
+
     var currentNode = _contents;
 
     for (var keyOrIndex in path) {
@@ -429,6 +436,7 @@ class YamlStringEditor implements YamlEditor {
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
+
     final actualTree = loadYamlNode(_yaml);
 
     if (!deepEquals(actualTree, expectedTree)) {

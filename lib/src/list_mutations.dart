@@ -138,7 +138,15 @@ SourceEdit _removeFromFlowList(
 
   if (index == 0) {
     start = yaml.lastIndexOf('[', start) + 1;
-    end = yaml.indexOf(RegExp(r',|]'), end) + 1;
+
+    final nextComma = yaml.indexOf(',', end);
+    final nextClosedBracket = yaml.indexOf(']', end);
+
+    if (nextComma < nextClosedBracket && nextComma != -1) {
+      end = nextComma + 1;
+    } else {
+      end = nextClosedBracket;
+    }
   } else {
     start = yaml.lastIndexOf(',', start);
   }
@@ -150,6 +158,13 @@ SourceEdit _removeFromFlowList(
 /// [nodeToRemove] from [nodes], noting that this is a block list.
 SourceEdit _removeFromBlockList(
     String yaml, YamlList list, YamlNode removedNode, int index) {
+  if (list.length == 1) {
+    final start = list.span.start.offset;
+    final end = getContentSensitiveEnd(removedNode);
+
+    return SourceEdit(start, end - start, '[]');
+  }
+
   final span = removedNode.span;
   var start = yaml.lastIndexOf('\n', span.start.offset);
   var end = yaml.indexOf('\n', span.end.offset);

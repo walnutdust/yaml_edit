@@ -172,37 +172,53 @@ c: 3
   });
 
   group('assign', () {
-    // test('empty document', () {
-    //   final doc = YamlEditor('');
-    //   doc.setIn([], 'replacement');
+    test('empty document', () {
+      final doc = YamlEditor('');
+      doc.assign([], 'replacement');
 
-    //   expect(doc.toString(), equals('replacement'));
-    //   expectYamlBuilderValue(doc, 'replacement');
-    // });
+      expect(doc.toString(), equals('replacement'));
+      expectYamlBuilderValue(doc, 'replacement');
+    });
 
-    // test('replaces string in document containing only a string', () {
-    //   final doc = YamlEditor('test');
-    //   doc.setIn([], 'replacement');
+    test('replaces string in document containing only a string', () {
+      final doc = YamlEditor('test');
+      doc.assign([], 'replacement');
 
-    //   expect(doc.toString(), equals('replacement'));
-    //   expectYamlBuilderValue(doc, 'replacement');
-    // });
+      expect(doc.toString(), equals('replacement'));
+      expectYamlBuilderValue(doc, 'replacement');
+    });
 
-    // test('replaces top-level list', () {
-    //   final doc = YamlEditor('- 1');
-    //   doc.setIn([], 'replacement');
+    test('replaces top-level string to map', () {
+      final doc = YamlEditor('test');
+      doc.assign([], {'a': 1});
 
-    //   expect(doc.toString(), equals('replacement'));
-    //   expectYamlBuilderValue(doc, 'replacement');
-    // });
+      expect(doc.toString(), equals('{a: 1}'));
+      expectYamlBuilderValue(doc, {'a': 1});
+    });
 
-    // test('replaces top-level map', () {
-    //   final doc = YamlEditor('a: 1');
-    //   doc.setIn([], 'replacement');
+    test('replaces top-level list', () {
+      final doc = YamlEditor('- 1');
+      doc.assign([], 'replacement');
 
-    //   expect(doc.toString(), equals('replacement'));
-    //   expectYamlBuilderValue(doc, 'replacement');
-    // });
+      expect(doc.toString(), equals('replacement'));
+      expectYamlBuilderValue(doc, 'replacement');
+    });
+
+    test('replaces top-level map', () {
+      final doc = YamlEditor('a: 1');
+      doc.assign([], 'replacement');
+
+      expect(doc.toString(), equals('replacement'));
+      expectYamlBuilderValue(doc, 'replacement');
+    });
+
+    test('replaces top-level map with comment', () {
+      final doc = YamlEditor('a: 1 # comment');
+      doc.assign([], 'replacement');
+
+      expect(doc.toString(), equals('replacement # comment'));
+      expectYamlBuilderValue(doc, 'replacement');
+    });
 
     test('throw RangeError in list if index is negative', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
@@ -787,6 +803,16 @@ c: 3
       expect(() => doc.remove([4]), throwsA(isA<ArgumentError>()));
     });
 
+    test('empty path should clear string', () {
+      final doc = YamlEditor('''
+a: 1
+b: 2
+c: [3, 4]
+''');
+      doc.remove([]);
+      expect(doc.toString(), equals(''));
+    });
+
     test('simple block map', () {
       final doc = YamlEditor('''
 a: 1
@@ -797,6 +823,66 @@ c: 3
       expect(doc.toString(), equals('''
 a: 1
 c: 3
+'''));
+    });
+
+    test('last element in block map should return flow empty map', () {
+      final doc = YamlEditor('''
+a: 1
+''');
+      doc.remove(['a']);
+      expect(doc.toString(), equals('''
+{}
+'''));
+    });
+
+    test('last element in block map should return flow empty map', () {
+      final doc = YamlEditor('''
+- a: 1
+- b: 2
+''');
+      doc.remove([0, 'a']);
+      expect(doc.toString(), equals('''
+- {}
+- b: 2
+'''));
+    });
+
+    test('last element in block list should return flow empty map', () {
+      final doc = YamlEditor('''
+- 0
+''');
+      doc.remove([0]);
+      expect(doc.toString(), equals('''
+[]
+'''));
+    });
+
+    test('last element in flow list should return flow empty map', () {
+      final doc = YamlEditor('''
+a: [1]
+b: [3]
+''');
+      doc.remove(['a', 0]);
+      expect(doc.toString(), equals('''
+a: []
+b: [3]
+'''));
+    });
+
+    test('last element in block list should return flow empty map (2)', () {
+      final doc = YamlEditor('''
+a: 
+  - 1
+b: 
+  - 3
+''');
+      doc.remove(['a', 0]);
+      expect(doc.toString(), equals('''
+a: 
+  []
+b: 
+  - 3
 '''));
     });
 
