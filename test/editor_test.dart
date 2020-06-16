@@ -1395,6 +1395,14 @@ a: # comments
   });
 
   group('spliceList', () {
+    test(
+        'throws ArgumentError if invalid index + deleteCount combination is passed in',
+        () {
+      final doc = YamlEditor('[0, 0]');
+      expect(() => doc.spliceList([], 1, 5, [1, 2]),
+          throwsA(isA<ArgumentError>()));
+    });
+
     test('simple block list', () {
       final doc = YamlEditor('''
 - 0

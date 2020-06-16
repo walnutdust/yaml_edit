@@ -366,8 +366,8 @@ class YamlStringEditor implements YamlEditor {
   /// inserts [values] in-place.
   ///
   /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
-  /// be thrown.
+  /// the given path is not a [YamlList], if the path is invalid, or if [index] + [deleteCount]
+  /// is greater than the list length, an [ArgumentError] will be thrown.
   ///
   /// ```dart
   /// final doc = YamlEditor('[Jan, March, April, June]');
