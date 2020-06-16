@@ -2,7 +2,7 @@ import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 import 'package:yaml/yaml.dart';
 
-import 'mod_utils.dart';
+import 'test_utils.dart';
 
 void main() {
   group('preserves original yaml: ', () {
@@ -933,6 +933,18 @@ c: 3
       expect(doc.toString(), equals('{a: 1, c: 3}'));
     });
 
+    test('simple flow map (2) ', () {
+      final doc = YamlEditor('{a: 1}');
+      doc.remove(['a']);
+      expect(doc.toString(), equals('{}'));
+    });
+
+    test('simple flow map (3) ', () {
+      final doc = YamlEditor('{a: 1, b: 2}');
+      doc.remove(['a']);
+      expect(doc.toString(), equals('{ b: 2}'));
+    });
+
     test('nested flow map ', () {
       final doc = YamlEditor('{a: 1, b: {d: 4, e: 5}, c: 3}');
       doc.remove(['b', 'd']);
@@ -1379,6 +1391,84 @@ a: # comments
 - 2 # comment b
 '''));
       expectYamlBuilderValue(doc, [0, 1, 2]);
+    });
+  });
+
+  group('spliceList', () {
+    test('simple block list', () {
+      final doc = YamlEditor('''
+- 0
+- 0
+''');
+      final nodes = doc.spliceList([], 1, 1, [1, 2]);
+      expect(doc.toString(), equals('''
+- 0
+- 1
+- 2
+'''));
+
+      expectDeepEquals(nodes.toList(), [0]);
+    });
+
+    test('simple block list (2)', () {
+      final doc = YamlEditor('''
+- 0
+- 0
+''');
+      final nodes = doc.spliceList([], 0, 2, [0, 1, 2]);
+      expect(doc.toString(), equals('''
+- 0
+- 1
+- 2
+'''));
+
+      expectDeepEquals(nodes.toList(), [0, 0]);
+    });
+
+    test('simple block list (3)', () {
+      final doc = YamlEditor('''
+- Jan
+- March
+- April
+- June
+''');
+      final nodes = doc.spliceList([], 1, 0, ['Feb']);
+      expect(doc.toString(), equals('''
+- Jan
+- Feb
+- March
+- April
+- June
+'''));
+
+      expectDeepEquals(nodes.toList(), []);
+
+      final nodes2 = doc.spliceList([], 4, 1, ['May']);
+      expect(doc.toString(), equals('''
+- Jan
+- Feb
+- March
+- April
+- May
+'''));
+
+      expectDeepEquals(nodes2.toList(), ['June']);
+    });
+
+    test('simple flow list', () {
+      final doc = YamlEditor('[0, 0]');
+      final nodes = doc.spliceList([], 1, 1, [1, 2]);
+      expect(doc.toString(), equals('[0, 1, 2]'));
+
+      expectDeepEquals(nodes.toList(), [0]);
+    });
+
+    test('simple flow list (2)', () {
+      final doc = YamlEditor('[0, 0]');
+      final nodes = doc.spliceList([], 0, 2, [0, 1, 2]);
+      expect(doc.toString(), equals('[0, 1, 2]'));
+
+      expectDeepEquals(nodes.toList(), [0, 0]);
     });
   });
 

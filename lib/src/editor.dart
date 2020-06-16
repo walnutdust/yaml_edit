@@ -108,6 +108,16 @@ abstract class YamlEditor {
   void insertIntoList(Iterable<Object> listPath, int index, Object value,
       {YamlStyle style});
 
+  /// Changes the contents of the list at [listPath] by removing [deleteCount] items at [index], and
+  /// inserts [values] in-place.
+  ///
+  /// [index] must be non-negative and no greater than the list's length. If the element at
+  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
+  /// be thrown.
+  Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
+      int deleteCount, Iterable<Object> values,
+      {YamlStyle style});
+
   /// Removes the node at [path].
   ///
   /// Throws [ArgumentError] if [path] is invalid.
@@ -343,13 +353,51 @@ class YamlStringEditor implements YamlEditor {
       {YamlStyle style}) {
     style ??= defaultStyle;
 
-    var yamlList = _traverseToList(listPath);
-    final edit = insertInList(_yaml, yamlList, index, value, style);
+    var list = _traverseToList(listPath);
+    final edit = insertInList(_yaml, list, index, value, style);
 
     final expectedList = updatedYamlList(
-        yamlList, (nodes) => nodes.insert(index, yamlNodeFrom(value)));
+        list, (nodes) => nodes.insert(index, yamlNodeFrom(value)));
 
     _performEdit(edit, listPath, expectedList);
+  }
+
+  /// Changes the contents of the list at [listPath] by removing [deleteCount] items at [index], and
+  /// inserts [values] in-place.
+  ///
+  /// [index] must be non-negative and no greater than the list's length. If the element at
+  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
+  /// be thrown.
+  ///
+  /// ```dart
+  /// final doc = YamlEditor('[Jan, March, April, June]');
+  /// doc.spliceList([], 1, 0, ['Feb']); // [Jan, Feb, March, April, June]
+  /// doc.spliceList([], 4, 1, ['May']); // [Jan, Feb, March, April, May]
+  /// ```
+  @override
+  Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
+      int deleteCount, Iterable<Object> values,
+      {YamlStyle style}) {
+    style ??= defaultStyle;
+    var list = _traverseToList(listPath);
+
+    final nodesToRemove = list.nodes.getRange(index, index + deleteCount);
+
+    /// Perform addition of elements before removal to avoid scenarioes where
+    /// a block list gets emptied out to {} to avoid changing collection styles
+    /// where possible.
+
+    /// Reverse [values] and insert them.
+    final reversedValues = values.toList().reversed;
+    for (var value in reversedValues) {
+      insertIntoList(listPath, index, value, style: style);
+    }
+
+    for (var i = 0; i < deleteCount; i++) {
+      remove([...listPath, index + values.length]);
+    }
+
+    return nodesToRemove;
   }
 
   /// Removes the node at [path].

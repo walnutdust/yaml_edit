@@ -155,7 +155,12 @@ SourceEdit _removeFromFlowMap(
 
   if (deepEquals(keyNode, map.keys.first)) {
     start = yaml.lastIndexOf('{', start) + 1;
-    end = yaml.indexOf(RegExp(r',|}'), end) + 1;
+
+    if (deepEquals(keyNode, map.keys.last)) {
+      end = yaml.indexOf('}', end);
+    } else {
+      end = yaml.indexOf(',', end) + 1;
+    }
   } else {
     start = yaml.lastIndexOf(',', start);
   }

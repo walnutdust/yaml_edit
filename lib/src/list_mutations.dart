@@ -109,16 +109,13 @@ SourceEdit _removeFromFlowList(
 
   if (index == 0) {
     start = yaml.lastIndexOf('[', start) + 1;
+    if (index == list.length - 1) {
+      end = yaml.indexOf(']', end);
+    } else {
+      end = yaml.indexOf(',', end) + 1;
+    }
   } else {
     start = yaml.lastIndexOf(',', start);
-  }
-
-  if (index == list.length - 1) {
-    end = yaml.indexOf(']', end);
-  } else if (index == 0) {
-    end = yaml.indexOf(',', end) + 1;
-  } else {
-    end = yaml.indexOf(',', end);
   }
 
   return SourceEdit(start, end - start, '');
