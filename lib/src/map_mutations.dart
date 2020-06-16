@@ -1,4 +1,4 @@
-import 'package:yaml/src/equality.dart' hide deepEquals;
+import 'package:yaml/src/equality.dart' show deepEqualsMap;
 import 'package:yaml/yaml.dart';
 
 import './source_edit.dart';
@@ -9,7 +9,7 @@ import './utils.dart';
 /// the element at [key] to [newValue] when re-parsed.
 SourceEdit assignInMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
-  if (!map.nodes.containsKey(key)) {
+  if (!containsKey(map, key)) {
     if (map.style == CollectionStyle.FLOW) {
       return _addToFlowMap(yaml, map, key, newValue, style);
     } else {
@@ -26,10 +26,8 @@ SourceEdit assignInMap(
 
 /// Performs the string operation on [yaml] to achieve the effect of removing
 /// the element at [key] to [newValue] when re-parsed.
-///
-/// Returns the [YamlNode] removed.
 SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
-  if (!map.nodes.containsKey(key)) return null;
+  if (!containsKey(map, key)) return null;
 
   final keyNode = getKeyNode(map, key);
   final valueNode = map.nodes[key];
@@ -47,13 +45,14 @@ int getMapIndentation(String yaml, YamlMap map) {
   if (map.style == CollectionStyle.FLOW) return 0;
 
   /// An empty block map doesn't really exist.
-  if (map.nodes.isEmpty) {
+  if (map.isEmpty) {
     throw UnsupportedError('Unable to get indentation for empty block list');
   }
 
+  /// Use the number of spaces between the last key and the newline as indentation.
   final lastKey = map.nodes.keys.last as YamlNode;
   final lastSpanOffset = lastKey.span.start.offset;
-  var lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
+  final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
   if (lastNewLine == -1) return lastSpanOffset;
 
   return lastSpanOffset - lastNewLine - 1;
@@ -71,8 +70,7 @@ YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
   /// This workaround is necessary since `_yamlNodeFrom` will re-wrap `YamlNodes`,
   /// so we need to unwrap them before passing them in.
   for (var key in dummyMap.keys) {
-    var keyValue = key.value;
-    updatedMap[keyValue] = dummyMap[key].value;
+    updatedMap[key.value] = dummyMap[key].value;
   }
 
   return yamlNodeFrom(updatedMap);
@@ -86,7 +84,7 @@ SourceEdit _addToFlowMap(
   final valueString = getFlowString(newValue);
 
   // The -1 accounts for the closing bracket.
-  if (map.nodes.isEmpty) {
+  if (map.isEmpty) {
     return SourceEdit(map.span.end.offset - 1, 0, '$keyString: $valueString');
   } else {
     return SourceEdit(map.span.end.offset - 1, 0, ', $keyString: $valueString');
@@ -97,15 +95,15 @@ SourceEdit _addToFlowMap(
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a block map.
 SourceEdit _addToBlockMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
+  final newIndentation = getMapIndentation(yaml, map) + style.indentationStep;
   final keyString = getFlowString(key);
-  final valueString = getBlockString(
-      newValue, getMapIndentation(yaml, map) + style.indentationStep);
+  final valueString = getBlockString(newValue, newIndentation);
   var formattedValue = ' ' * getMapIndentation(yaml, map) + '$keyString: ';
   var offset = map.span.end.offset;
 
   // Adjusts offset to after the trailing newline of the last entry, if it exists
-  if (map.nodes.isNotEmpty) {
-    final lastValueSpanEnd = map.nodes.values.last.span.end.offset;
+  if (map.isNotEmpty) {
+    final lastValueSpanEnd = getContentSensitiveEnd(map.nodes.values.last);
     final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
 
     if (nextNewLineIndex != -1) {
@@ -114,8 +112,6 @@ SourceEdit _addToBlockMap(
       formattedValue = '\n' + formattedValue;
     }
   }
-
-  if (isCollection(newValue)) formattedValue += '\n';
 
   formattedValue += valueString + '\n';
 
@@ -128,12 +124,9 @@ SourceEdit _addToBlockMap(
 SourceEdit _replaceInFlowMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   final valueSpan = map.nodes[key].span;
-  var valueString = getFlowString(newValue);
+  final valueString = getFlowString(newValue);
 
-  if (isCollection(newValue)) valueString = '\n' + valueString;
-
-  return SourceEdit(valueSpan.start.offset,
-      valueSpan.end.offset - valueSpan.start.offset, valueString);
+  return SourceEdit(valueSpan.start.offset, valueSpan.length, valueString);
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of replacing
@@ -141,16 +134,14 @@ SourceEdit _replaceInFlowMap(
 /// block map.
 SourceEdit _replaceInBlockMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
+  final newIndentation = getMapIndentation(yaml, map) + style.indentationStep;
   final value = map.nodes[key];
   final keyNode = getKeyNode(map, key);
-  var valueString = getBlockString(
-      newValue, getMapIndentation(yaml, map) + style.indentationStep);
+  var valueString = getBlockString(newValue, newIndentation);
 
   /// +2 accounts for the colon
   final start = keyNode.span.end.offset + 2;
   final end = getContentSensitiveEnd(value);
-
-  if (isCollection(newValue)) valueString = '\n' + valueString;
 
   return SourceEdit(start, end - start, valueString);
 }
@@ -159,12 +150,10 @@ SourceEdit _replaceInBlockMap(
 /// the [key] from the map, bearing in mind that this is a flow map.
 SourceEdit _removeFromFlowMap(
     String yaml, YamlMap map, YamlNode keyNode, YamlNode valueNode) {
-  final keySpan = keyNode.span;
-  final valueSpan = valueNode.span;
-  var start = keySpan.start.offset;
-  var end = valueSpan.end.offset;
+  var start = keyNode.span.start.offset;
+  var end = valueNode.span.end.offset;
 
-  if (deepEquals(keyNode, map.nodes.keys.first)) {
+  if (deepEquals(keyNode, map.keys.first)) {
     start = yaml.lastIndexOf('{', start) + 1;
     end = yaml.indexOf(RegExp(r',|}'), end) + 1;
   } else {
@@ -185,9 +174,9 @@ SourceEdit _removeFromBlockMap(
     final start = map.span.start.offset;
 
     return SourceEdit(start, end - start, '{}');
-  } else {
-    var start = yaml.lastIndexOf('\n', keySpan.start.offset);
-    if (start == -1) start = 0;
-    return SourceEdit(start, end - start, '');
   }
+
+  var start = yaml.lastIndexOf('\n', keySpan.start.offset);
+  if (start == -1) start = 0;
+  return SourceEdit(start, end - start, '');
 }

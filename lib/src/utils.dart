@@ -52,9 +52,7 @@ String getSafeString(Object value) {
 }
 
 /// Returns values as strings representing flow objects.
-String getFlowString(Object value) {
-  return getSafeString(value);
-}
+String getFlowString(Object value) => getSafeString(value);
 
 /// Returns values as strings representing block objects.
 ///
@@ -63,16 +61,22 @@ String getFlowString(Object value) {
 String getBlockString(Object value,
     [int indentation = 0, int additionalIndentation = 2]) {
   if (value is List) {
-    return value.map((e) => ' ' * indentation + '- $e').join('\n');
+    return '\n' + value.map((e) => ' ' * indentation + '- $e').join('\n');
   } else if (value is Map) {
-    return value.entries.map((entry) {
-      var result = ' ' * indentation + '${entry.key}:';
+    return '\n' +
+        value.entries.map((entry) {
+          final formattedKey = ' ' * indentation + '${entry.key}: ';
+          var formattedValue;
 
-      if (!isCollection(entry.value)) return result + ' ${entry.value}';
+          if (isCollection(entry.value)) {
+            final newIndentation = indentation + additionalIndentation;
+            formattedValue = getBlockString(entry.value, newIndentation);
+          } else {
+            formattedValue = getFlowString(entry.value);
+          }
 
-      return '$result\n' +
-          getBlockString(entry.value, indentation + additionalIndentation);
-    }).join('\n');
+          return formattedKey + formattedValue;
+        }).join('\n');
   }
 
   return getSafeString(value);
@@ -163,6 +167,7 @@ Object getKey(Map map, Object key) {
   return map.keys.firstWhere((k) => deepEquals(k, key));
 }
 
+/// Checks if [map] has any keys equal to the provided [key] by deep equality.
 bool containsKey(Map map, Object key) {
   try {
     map.keys.firstWhere((node) => deepEquals(node, key));

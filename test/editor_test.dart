@@ -258,7 +258,7 @@ c: 3
       });
 
       expect(doc.toString(), equals('''YAML: 
-  YAML:
+  YAML: 
     YAML: YAML Ain't Markup Language'''));
       expectYamlBuilderValue(doc, {
         'YAML': {
@@ -1066,7 +1066,8 @@ c: 3
 - 1
 - 2
 - 3
-- - 4
+- 
+  - 4
   - 5
   - 6
 '''));
@@ -1110,7 +1111,8 @@ c: 3
 - 0
 - - 1
   - 2
-  - - 3
+  - 
+    - 3
     - 4
     - 5
 '''));
@@ -1160,7 +1162,7 @@ c: 3
     test('simple flow list with spaces', () {
       final doc = YamlEditor('[ 1 , 2 ]');
       doc.prependToList([], 0);
-      expect(doc.toString(), equals('[0,  1 , 2 ]'));
+      expect(doc.toString(), equals('[ 0, 1 , 2 ]'));
       expectYamlBuilderValue(doc, [0, 1, 2]);
     });
 
@@ -1207,7 +1209,8 @@ c: 3
 ''');
       doc.prependToList([], [4, 5, 6]);
       expect(doc.toString(), equals('''
-- - 4
+- 
+  - 4
   - 5
   - 6
 - 1

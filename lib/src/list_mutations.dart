@@ -4,54 +4,29 @@ import './source_edit.dart';
 import './style.dart';
 import './utils.dart';
 
-/// Performs the string operation on [yaml] to achieve the effect of setting
-/// the element at [index] to [newValue] when re-parsed.
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of setting the element at [index] to [newValue] when re-parsed.
 SourceEdit assignInList(
     String yaml, YamlList list, int index, Object newValue, YamlStyle style) {
+  final currValue = list.nodes[index];
+  final offset = currValue.span.start.offset;
+  var valueString;
+
+  /// We do not use the [_formatNewBlock] since we want to only replace the contents
+  /// of this node while preserving comments/whitespace, while [_formatNewBlock]
+  /// produces a string represnetation of a new node.
   if (list.style == CollectionStyle.BLOCK) {
-    return _assignInBlockList(yaml, list, index, newValue, style);
+    final indentation = getListIndentation(yaml, list) + style.indentationStep;
+    valueString = getBlockString(newValue, indentation);
   } else {
-    return _assignInFlowList(yaml, list, index, newValue, style);
+    valueString = getFlowString(newValue);
   }
+
+  return SourceEdit(offset, currValue.span.length, valueString);
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of setting
-/// the element at [index] to [newValue] when re-parsed, bearing in mind that
-/// [list] is a flow list.
-SourceEdit _assignInFlowList(
-    String yaml, YamlList list, int index, Object newValue, YamlStyle style) {
-  final currValue = list.nodes[index];
-
-  final offset = currValue.span.start.offset;
-  final end = getContentSensitiveEnd(currValue);
-  final length = end - offset;
-
-  var valueString = getFlowString(newValue);
-
-  return SourceEdit(offset, length, valueString);
-}
-
-/// Performs the string operation on [yaml] to achieve the effect of setting
-/// the element at [index] to [newValue] when re-parsed, bearing in mind that
-/// [list] is a block list.
-SourceEdit _assignInBlockList(
-    String yaml, YamlList list, int index, Object newValue, YamlStyle style) {
-  final currValue = list.nodes[index];
-
-  final offset = currValue.span.start.offset;
-  final end = getContentSensitiveEnd(currValue);
-  final length = end - offset;
-
-  var valueString = getBlockString(
-      newValue, getListIndentation(yaml, list) + style.indentationStep);
-
-  if (isCollection(newValue)) valueString = '\n' + valueString;
-
-  return SourceEdit(offset, length, valueString);
-}
-
-/// Performs the string operation on [yaml] to achieve the effect of removing
-/// the element at [index] when re-parsed.
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of removing the element at [index] when re-parsed.
 SourceEdit removeInList(String yaml, YamlList list, int index) {
   final nodeToRemove = list.nodes[index];
 
@@ -62,35 +37,29 @@ SourceEdit removeInList(String yaml, YamlList list, int index) {
   }
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of
-/// appending [elem] to the list.
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of appending [elem] to the list.
 SourceEdit appendIntoList(
     String yaml, YamlList list, Object elem, YamlStyle style) {
   if (list.style == CollectionStyle.FLOW) {
-    return _addToFlowList(yaml, list, elem, style);
+    return _appendToFlowList(yaml, list, elem, style);
   } else {
-    return _addToBlockList(yaml, list, elem, style);
+    return _appendToBlockList(yaml, list, elem, style);
   }
 }
 
-/// Performs the string operation on [yaml] to achieve a similar effect of
-/// inserting [elem] to the list at [index].
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of inserting [elem] to the list at [index].
 SourceEdit insertInList(
     String yaml, YamlList list, int index, Object elem, YamlStyle style) {
   if (index > list.length || index < 0) {
     throw RangeError.range(index, 0, list.length);
   }
 
-  /// We call the add method if the user wants to add it to the end of the list
+  /// We call the append method if the user wants to append it to the end of the list
   /// because appending requires different techniques.
   if (index == list.length) {
     return appendIntoList(yaml, list, elem, style);
-  } else if (index == 0) {
-    if (list.style == CollectionStyle.FLOW) {
-      return _prependToFlowList(yaml, list, elem, style);
-    } else {
-      return _prependToBlockList(yaml, list, elem, style);
-    }
   } else {
     if (list.style == CollectionStyle.FLOW) {
       return _insertInFlowList(yaml, list, index, elem, style);
@@ -103,16 +72,18 @@ SourceEdit insertInList(
 /// Gets the indentation level of the list. This is 0 if it is a flow list,
 /// but returns the number of spaces before the hyphen of elements for
 /// block lists.
+///
+/// Throws [UnsupportedError] if an empty block map is passed in.
 int getListIndentation(String yaml, YamlList list) {
   if (list.style == CollectionStyle.FLOW) return 0;
 
   /// An empty block map doesn't really exist.
-  if (list.nodes.isEmpty) {
+  if (list.isEmpty) {
     throw UnsupportedError('Unable to get indentation for empty block list');
   }
 
   final lastSpanOffset = list.nodes.last.span.start.offset;
-  var lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
+  final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
   final lastHyphen = yaml.lastIndexOf('-', lastSpanOffset);
 
   if (lastNewLine == -1) return lastHyphen;
@@ -128,8 +99,8 @@ YamlList updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
   return yamlNodeFrom(newNodes);
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of removing
-/// [nodeToRemove] from [nodes], noting that this is a flow list.
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of removing [nodeToRemove] from [nodes], noting that this is a flow list.
 SourceEdit _removeFromFlowList(
     String yaml, YamlList list, YamlNode nodeToRemove, int index) {
   final span = nodeToRemove.span;
@@ -138,26 +109,27 @@ SourceEdit _removeFromFlowList(
 
   if (index == 0) {
     start = yaml.lastIndexOf('[', start) + 1;
-
-    final nextComma = yaml.indexOf(',', end);
-    final nextClosedBracket = yaml.indexOf(']', end);
-
-    if (nextComma < nextClosedBracket && nextComma != -1) {
-      end = nextComma + 1;
-    } else {
-      end = nextClosedBracket;
-    }
   } else {
     start = yaml.lastIndexOf(',', start);
+  }
+
+  if (index == list.length - 1) {
+    end = yaml.indexOf(']', end);
+  } else if (index == 0) {
+    end = yaml.indexOf(',', end) + 1;
+  } else {
+    end = yaml.indexOf(',', end);
   }
 
   return SourceEdit(start, end - start, '');
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of removing
-/// [nodeToRemove] from [nodes], noting that this is a block list.
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of removing [nodeToRemove] from [nodes], noting that this is a block list.
 SourceEdit _removeFromBlockList(
     String yaml, YamlList list, YamlNode removedNode, int index) {
+  /// If we are removing the last element in a block list, convert it into a flow
+  /// empty list.
   if (list.length == 1) {
     final start = list.span.start.offset;
     final end = getContentSensitiveEnd(removedNode);
@@ -175,111 +147,58 @@ SourceEdit _removeFromBlockList(
   return SourceEdit(start, end - start, '');
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of prepending
-/// [elem] into [nodes], noting that this is a flow list.
-SourceEdit _prependToFlowList(
-    String yaml, YamlList list, Object elem, YamlStyle style) {
-  var valueString = getFlowString(elem);
-  if (list.nodes.isNotEmpty) valueString = '$valueString, ';
-
-  return SourceEdit(list.span.start.offset + 1, 0, valueString);
-}
-
-/// Performs the string operation on [yaml] to achieve the effect of prepending
-/// [elem] into [nodes], noting that this is a block list.
-SourceEdit _prependToBlockList(
-    String yaml, YamlList list, Object elem, YamlStyle style) {
-  final valueString = getBlockString(
-      elem, getListIndentation(yaml, list) + style.indentationStep);
-  var formattedValue = ''.padLeft(getListIndentation(yaml, list)) + '- ';
-
-  if (isCollection(elem)) {
-    formattedValue += valueString
-            .substring(getListIndentation(yaml, list) + style.indentationStep) +
-        '\n';
-  } else {
-    formattedValue += valueString + '\n';
-  }
-
-  final startOffset = yaml.lastIndexOf('\n', list.span.start.offset) + 1;
-
-  return SourceEdit(startOffset, 0, formattedValue);
-}
-
-/// Performs the string operation on [yaml] to achieve the effect of insertion
-/// [elem] into [nodes] at [index], noting that this is a flow list. [index] should
-/// be non-negative and less than or equal to [length].
+/// Returns a [SourceEdit] describing the change to be made  on [yaml] to achieve the effect of insertion
+/// [elem] into [nodes] at [index], noting that this is a flow list.
+///
+/// [index] should be non-negative and less than or equal to [length].
 SourceEdit _insertInFlowList(
     String yaml, YamlList list, int index, Object elem, YamlStyle style) {
-  if (index == list.length) return _addToFlowList(yaml, list, elem, style);
-  if (index == 0) return _prependToFlowList(yaml, list, elem, style);
+  if (index == list.length) return _appendToFlowList(yaml, list, elem, style);
 
-  var valueString = ' ' + getFlowString(elem);
-  if (list.nodes.isNotEmpty) valueString = '$valueString,';
+  final formattedValue = _formatNewFlow(list, elem);
 
   final currNode = list.nodes[index];
-  final currNodeStartIdx = currNode.span.start.offset;
-  final startOffset = yaml.lastIndexOf(RegExp(r',|\['), currNodeStartIdx) + 1;
+  final currNodeStart = currNode.span.start.offset;
+  var start = yaml.lastIndexOf(RegExp(r',|\['), currNodeStart) + 1;
+  if (yaml[start] == ' ') start++;
 
-  return SourceEdit(startOffset, 0, valueString);
+  return SourceEdit(start, 0, formattedValue);
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of insertion
-/// [elem] into [nodes] at [index], noting that this is a block list. [index] should
-/// be non-negative and less than or equal to [length].
+/// Returns a [SourceEdit] describing the change to be made  on [yaml] to achieve the
+/// effect of inserting [elem] into [nodes] at [index], noting that this is a block
+/// list.
+///
+/// [index] should be non-negative and less than or equal to [length].
 SourceEdit _insertInBlockList(
     String yaml, YamlList list, int index, Object elem, YamlStyle style) {
-  if (index == list.length) {
-    return _addToBlockList(yaml, list, elem, style);
-  }
-  if (index == 0) return _prependToBlockList(yaml, list, elem, style);
+  if (index == list.length) return _appendToBlockList(yaml, list, elem, style);
 
-  final finalIndentation =
-      getListIndentation(yaml, list) + style.indentationStep;
-  final valueString = getBlockString(elem, finalIndentation);
-  var formattedValue = ' ' * getListIndentation(yaml, list) + '- ';
-
-  if (isCollection(elem)) {
-    formattedValue += '\n$valueString\n';
-  } else {
-    formattedValue += valueString + '\n';
-  }
+  final formattedValue = _formatNewBlock(yaml, list, elem, style);
 
   final currNode = list.nodes[index];
-  final currNodeStartIdx = currNode.span.start.offset;
-  final startOffset = yaml.lastIndexOf('\n', currNodeStartIdx) + 1;
+  final currNodeStart = currNode.span.start.offset;
+  final start = yaml.lastIndexOf('\n', currNodeStart) + 1;
 
-  return SourceEdit(startOffset, 0, formattedValue);
+  return SourceEdit(start, 0, formattedValue);
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of addition
-/// [elem] into [nodes], noting that this is a flow list.
-SourceEdit _addToFlowList(
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of addition [elem] into [nodes], noting that this is a flow list.
+SourceEdit _appendToFlowList(
     String yaml, YamlList list, Object elem, YamlStyle style) {
-  var valueString = getFlowString(elem);
-  if (list.nodes.isNotEmpty) valueString = ', ' + valueString;
-
+  final valueString = _formatNewFlow(list, elem, true);
   return SourceEdit(list.span.end.offset - 1, 0, valueString);
 }
 
-/// Performs the string operation on [yaml] to achieve the effect of addition
-/// [elem] into [nodes], noting that this is a block list.
-SourceEdit _addToBlockList(
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of addition [elem] into [nodes], noting that this is a block list.
+SourceEdit _appendToBlockList(
     String yaml, YamlList list, Object elem, YamlStyle style) {
-  final valueString = getBlockString(
-      elem, getListIndentation(yaml, list) + style.indentationStep);
-  var formattedValue = ''.padLeft(getListIndentation(yaml, list)) + '- ';
-
-  if (isCollection(elem)) {
-    formattedValue += valueString
-            .substring(getListIndentation(yaml, list) + style.indentationStep) +
-        '\n';
-  } else {
-    formattedValue += valueString + '\n';
-  }
+  var formattedValue = _formatNewBlock(yaml, list, elem, style);
 
   // Adjusts offset to after the trailing newline of the last entry, if it exists
-  if (list.nodes.isNotEmpty) {
+  if (list.isNotEmpty) {
     final lastValueSpanEnd = list.nodes.last.span.end.offset;
     final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
     if (nextNewLineIndex == -1) {
@@ -288,4 +207,25 @@ SourceEdit _addToBlockList(
   }
 
   return SourceEdit(list.span.end.offset, 0, formattedValue);
+}
+
+/// Formats [elem] for block lists.
+String _formatNewBlock(
+    String yaml, YamlList list, Object elem, YamlStyle style) {
+  final indentation = getListIndentation(yaml, list) + style.indentationStep;
+  final valueString = getBlockString(elem, indentation);
+  final indentedHyphen = ' ' * getListIndentation(yaml, list) + '- ';
+
+  return '$indentedHyphen$valueString\n';
+}
+
+/// Formats [elem] for flow lists.
+String _formatNewFlow(YamlList list, Object elem, [bool isLast = false]) {
+  var valueString = getFlowString(elem);
+  if (list.isNotEmpty) {
+    if (isLast) valueString = ', $valueString';
+    if (!isLast) valueString += ', ';
+  }
+
+  return valueString;
 }

@@ -33,7 +33,9 @@ import './utils.dart';
 ///
 /// To get to `7`, our path will be `['c', 2, 'f', 1]`. The path for the base object is the
 /// empty array `[]`. All modification methods will return a [ArgumentError] if the path
-/// provided is invalid.
+/// provided is invalid. Note also that that the order of elements in [path] is important,
+/// and it should be arranged in order of calling, with the first element being the first
+/// key or index to be called.
 ///
 /// To dump the YAML after all the modifications have been completed, simply call [toString()].
 ///
@@ -59,31 +61,37 @@ abstract class YamlEditor {
   /// instead if the key is not present.
   YamlNode parseAt(Iterable<Object> path, {Object orElse});
 
-  /// Sets [value] in the [path], with an optional [style] parameter applied to only this modification.
+  /// Sets [value] in the [path].
   ///
   /// Note that [assign] provides a different result as compared to a [remove] followed by an
   /// [insertIntoList], because it preserves comments at the same level.
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
+  /// [RangeError] if [keyOrIndex] is negative or longer than list length).
+  ///
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void assign(Iterable<Object> path, Object value, {YamlStyle style});
 
-  /// Appends [value] into the list at [listPath]. If the element at the given path is not a [YamlList],
-  /// an [ArgumentError] will be thrown.
+  /// Appends [value] into the list at [listPath].
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
+  /// [ArgumentError] will be thrown.
+  ///
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void appendToList(Iterable<Object> listPath, Object value, {YamlStyle style});
 
   /// Prepends [value] into the list at [listPath].
   ///
-  /// If the element at the given path is not a [YamlList], an [ArgumentError] will be thrown.
+  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
+  /// [ArgumentError] will be thrown.
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void prependToList(Iterable<Object> listPath, Object value,
       {YamlStyle style});
 
@@ -91,11 +99,12 @@ abstract class YamlEditor {
   /// is a list.
   ///
   /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList], an [ArgumentError] will be thrown.
+  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
+  /// be thrown.
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void insertIntoList(Iterable<Object> listPath, int index, Object value,
       {YamlStyle style});
 
@@ -221,9 +230,9 @@ class YamlStringEditor implements YamlEditor {
   /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
   /// [RangeError] if [keyOrIndex] is negative or longer than list length).
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   ///
   /// ```dart
   /// final doc = YamlEditor('''
@@ -290,12 +299,14 @@ class YamlStringEditor implements YamlEditor {
     _performEdit(edit, collectionPath, expectedNode);
   }
 
-  /// Appends [value] into the list at [listPath]. If the element at the given path is not a [YamlList],
-  /// an [ArgumentError] will be thrown.
+  /// Appends [value] into the list at [listPath].
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
+  /// [ArgumentError] will be thrown.
+  ///
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
   void appendToList(Iterable<Object> listPath, Object value,
       {YamlStyle style}) {
@@ -306,11 +317,12 @@ class YamlStringEditor implements YamlEditor {
 
   /// Prepends [value] into the list at [listPath].
   ///
-  /// If the element at the given path is not a [YamlList], an [ArgumentError] will be thrown.
+  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
+  /// [ArgumentError] will be thrown.
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
   void prependToList(Iterable<Object> listPath, Object value,
           {YamlStyle style}) =>
@@ -320,11 +332,12 @@ class YamlStringEditor implements YamlEditor {
   /// is a list.
   ///
   /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList], an [ArgumentError] will be thrown.
+  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
+  /// be thrown.
   ///
-  /// Users have the option of defining the indentation applied and whether
-  /// flow structures will be applied via the optional parameter [style]. For a comprehensive
-  /// list of styling options, refer to the documentation for [YamlStyle].
+  /// Users have the option of defining the indentation applied for this particular
+  /// modification and whether flow structures will be applied via the optional parameter [style].
+  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
   void insertIntoList(Iterable<Object> listPath, int index, Object value,
       {YamlStyle style}) {
@@ -386,7 +399,7 @@ class YamlStringEditor implements YamlEditor {
 
     for (var keyOrIndex in path) {
       if (currentNode is YamlList) {
-        var list = currentNode as YamlList;
+        final list = currentNode as YamlList;
         if (isValidIndex(keyOrIndex, list.length)) {
           currentNode = list.nodes[keyOrIndex];
         } else {
@@ -394,10 +407,9 @@ class YamlStringEditor implements YamlEditor {
               'List $list does not take index $keyOrIndex from path $path');
         }
       } else if (currentNode is YamlMap) {
-        var map = currentNode as YamlMap;
+        final map = currentNode as YamlMap;
 
-        /// Map containsKey doesn't work...
-        if (map.nodes[keyOrIndex] is YamlNode) {
+        if (containsKey(map, keyOrIndex)) {
           currentNode = map.nodes[keyOrIndex];
         } else {
           throw ArgumentError(
@@ -422,15 +434,15 @@ class YamlStringEditor implements YamlEditor {
     if (possibleList is YamlList) {
       return possibleList;
     } else {
-      throw ArgumentError('Invalid path $path!');
+      throw ArgumentError('Path $path does not point to a YamlList!');
     }
   }
 
   /// Utility method to replace the substring of [_yaml] according to [edit].
   ///
   /// When [_yaml] is modified with this method, the resulting string is parsed
-  /// and reloaded and traversed down [path] to ensure that the reparsed node is
-  /// equal to [expectedNode] using `package:yaml`'s deep equality. Throws an
+  /// and reloaded and traversed down [path] to ensure that the reloaded YAML tree
+  /// is equal to our expectations by deep equality of values. Throws an
   /// [AssertionError] if the two trees do not match.
   void _performEdit(
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
@@ -454,12 +466,16 @@ $expectedTree''');
   /// Utility method to produce an updated YAML tree equivalent to converting the [YamlNode]
   /// at [path] to be [expectedNode].
   ///
+  /// Throws an [ArgumentError] if path is invalid.
+  ///
+  /// When called, it creates a new [YamlNode] of the same type as [tree], and copies its children
+  /// over, except for the child that is on the path. Doing so allows us to "update" the immutable
+  /// [YamlNode] without having to clone the whole tree.
+  ///
   /// [SourceSpan]s in this new tree are not guaranteed to be accurate.
   YamlNode _deepModify(
       YamlNode tree, Iterable<Object> path, YamlNode expectedNode) {
-    if (path.isEmpty) {
-      return expectedNode;
-    }
+    if (path.isEmpty) return expectedNode;
 
     final nextPath = path.skip(1);
 
