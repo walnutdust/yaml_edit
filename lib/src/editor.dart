@@ -185,7 +185,7 @@ class YamlStringEditor implements YamlEditor {
   ///
   /// print(node.value); // Expected output: "YAML Ain't Markup Language"
   ///
-  /// doc.setIn(['YAML'], 'YAML');
+  /// doc.assign(['YAML'], 'YAML');
   ///
   /// final newNode = doc.parseAt(['YAML']);
   ///
@@ -212,8 +212,8 @@ class YamlStringEditor implements YamlEditor {
   /// ```dart
   /// doc.parseAt(my_path, orElse: #doesNotExist);
   ///
-  /// // Or, if you know that your collection will not contain booleans,
-  /// doc.parseAt(my_path, orElse: false);
+  /// // Or, if you know that your collection will not contain null,
+  /// doc.parseAt(my_path, orElse: null);
   /// ```
   @override
   YamlNode parseAt(Iterable<Object> path, {Object orElse = #noArg}) {
@@ -261,17 +261,21 @@ class YamlStringEditor implements YamlEditor {
   /// ```
   ///
   /// ```dart
-  /// final doc2 = YamlEditor("[YAML Ain't Markup Language   # comment]");
-  /// doc2.removeIn([1]);
-  /// doc2.insertIntoList([1], 'test');
+  /// final doc2 = YamlEditor('''
+  ///   - 0
+  ///   - 1 # comment
+  ///   - 2
+  /// ''');
+  /// doc2.remove([1]);
+  /// doc2.insertIntoList([], 1, 'test');
   /// ```
   ///
   /// Expected Output:
-  /// '''
+  /// ```yaml
   ///   - 0
   ///   - test
   ///   - 2
-  /// '''
+  /// ```
   @override
   void assign(Iterable<Object> path, Object value, {YamlStyle style}) {
     if (path.isEmpty) {
