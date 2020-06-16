@@ -1,4 +1,4 @@
-import 'package:yaml/src/equality.dart';
+import 'package:yaml/src/equality.dart' hide deepEquals;
 import 'package:yaml/yaml.dart';
 
 import './source_edit.dart';
@@ -7,7 +7,7 @@ import './utils.dart';
 
 /// Performs the string operation on [yaml] to achieve the effect of setting
 /// the element at [key] to [newValue] when re-parsed.
-SourceEdit setInMap(
+SourceEdit assignInMap(
     String yaml, YamlMap map, Object key, Object newValue, YamlStyle style) {
   if (!map.nodes.containsKey(key)) {
     if (map.style == CollectionStyle.FLOW) {
@@ -41,12 +41,6 @@ SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
   }
 }
 
-/// Returns the [YamlNode] corresponding to the provided [key].
-YamlNode getKeyNode(YamlMap map, Object key) {
-  return (map.nodes.keys.firstWhere((node) => deepEquals(node, key))
-      as YamlNode);
-}
-
 /// Gets the indentation level of the map. This is 0 if it is a flow map,
 /// but returns the number of spaces before the keys for block maps.
 int getMapIndentation(String yaml, YamlMap map) {
@@ -67,18 +61,18 @@ int getMapIndentation(String yaml, YamlMap map) {
 
 /// Returns a new [YamlMap] constructed by applying [update] onto the [nodes]
 /// of this [YamlMap].
-YamlMap updatedYamlMap(YamlMap map, Function(Map<dynamic, YamlNode>) update) {
-  final dummyMap = {...map.nodes};
-  update(dummyMap);
+YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
+  final dummyMap = deepEqualsMap();
+  dummyMap.addAll(map.nodes);
 
+  update(dummyMap);
   final updatedMap = {};
 
   /// This workaround is necessary since `_yamlNodeFrom` will re-wrap `YamlNodes`,
   /// so we need to unwrap them before passing them in.
   for (var key in dummyMap.keys) {
     var keyValue = key.value;
-
-    updatedMap[keyValue] = dummyMap[key];
+    updatedMap[keyValue] = dummyMap[key].value;
   }
 
   return yamlNodeFrom(updatedMap);

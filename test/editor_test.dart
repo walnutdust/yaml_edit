@@ -401,6 +401,30 @@ true: 'true'
       expectYamlBuilderValue(doc, {'YAML': '> hi'});
     });
 
+    test('simple flow map (7)', () {
+      final doc = YamlEditor('{[1,2,3]: a}');
+      doc.assign([
+        [1, 2, 3]
+      ], 'sums to 6');
+
+      expect(doc.toString(), equals('{[1,2,3]: sums to 6}'));
+      expectYamlBuilderValue(doc, {
+        [1, 2, 3]: 'sums to 6'
+      });
+    });
+
+    test('simple flow map (8)', () {
+      final doc = YamlEditor('{{a: 1}: a}');
+      doc.assign([
+        {'a': 1}
+      ], 'sums to 6');
+
+      expect(doc.toString(), equals('{{a: 1}: sums to 6}'));
+      expectYamlBuilderValue(doc, {
+        {'a': 1}: 'sums to 6'
+      });
+    });
+
     test('simple flow map with spacing', () {
       final doc = YamlEditor("{YAML:  YAML Ain't Markup Language }");
       doc.assign(['YAML'], 'hi');

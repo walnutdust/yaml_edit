@@ -1,7 +1,6 @@
 import 'dart:collection' show UnmodifiableListView;
 
 import 'package:meta/meta.dart';
-import 'package:yaml/src/equality.dart';
 import 'package:yaml/yaml.dart';
 
 import './list_mutations.dart';
@@ -280,7 +279,7 @@ class YamlStringEditor implements YamlEditor {
       expectedNode =
           updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
     } else if (parentNode is YamlMap) {
-      edit = setInMap(_yaml, parentNode, keyOrIndex, value, style);
+      edit = assignInMap(_yaml, parentNode, keyOrIndex, value, style);
       final keyNode = yamlNodeFrom(keyOrIndex);
       expectedNode =
           updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode);
@@ -366,9 +365,8 @@ class YamlStringEditor implements YamlEditor {
       } else if (parentNode is YamlMap) {
         edit = removeInMap(_yaml, parentNode, keyOrIndex);
 
-        final keyNode = getKeyNode(parentNode, keyOrIndex);
         expectedNode =
-            updatedYamlMap(parentNode, (nodes) => nodes.remove(keyNode));
+            updatedYamlMap(parentNode, (nodes) => nodes.remove(keyOrIndex));
       }
 
       _performEdit(edit, collectionPath, expectedNode);
@@ -389,7 +387,7 @@ class YamlStringEditor implements YamlEditor {
     for (var keyOrIndex in path) {
       if (currentNode is YamlList) {
         var list = currentNode as YamlList;
-        if (keyOrIndex is int && keyOrIndex >= 0 && keyOrIndex < list.length) {
+        if (isValidIndex(keyOrIndex, list.length)) {
           currentNode = list.nodes[keyOrIndex];
         } else {
           throw ArgumentError(
@@ -397,7 +395,9 @@ class YamlStringEditor implements YamlEditor {
         }
       } else if (currentNode is YamlMap) {
         var map = currentNode as YamlMap;
-        if (map.containsKey(keyOrIndex)) {
+
+        /// Map containsKey doesn't work...
+        if (map.nodes[keyOrIndex] is YamlNode) {
           currentNode = map.nodes[keyOrIndex];
         } else {
           throw ArgumentError(
@@ -436,7 +436,6 @@ class YamlStringEditor implements YamlEditor {
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
-
     final actualTree = loadYamlNode(_yaml);
 
     if (!deepEquals(actualTree, expectedTree)) {

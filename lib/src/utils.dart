@@ -1,3 +1,4 @@
+import 'package:yaml/src/equality.dart' as yaml_equality;
 import 'package:yaml/yaml.dart';
 
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
@@ -116,4 +117,58 @@ YamlNode yamlNodeFrom(Object value) {
 /// Checks if [index] is [int], >=0, < [length]
 bool isValidIndex(Object index, int length) {
   return index is int && index >= 0 && index < length;
+}
+
+/// Compares two [Object]s for deep equality, extending from `package:yaml`'s deep
+/// equality notation to allow for comparison of non scalar map keys.
+bool deepEquals(Object obj1, Object obj2) {
+  if (obj1 is Map && obj2 is Map) {
+    return mapDeepEquals(obj1, obj2);
+  }
+
+  return yaml_equality.deepEquals(obj1, obj2);
+}
+
+/// Compares two [Map]s for deep equality, extending from `package:yaml`'s deep
+/// equality notation to allow for comparison of non scalar map keys.
+bool mapDeepEquals(Map map1, Map map2) {
+  if (map1.length != map2.length) return false;
+
+  for (var key in map1.keys) {
+    if (!containsKey(map2, key)) {
+      return false;
+    }
+
+    /// Because two keys may be equal by deep equality but using one key on the
+    /// other map might not get a hit.
+    final key2 = getKey(map2, key);
+
+    if (!deepEquals(map1[key], map2[key2])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/// Returns the [YamlNode] corresponding to the provided [key].
+YamlNode getKeyNode(YamlMap map, Object key) {
+  return (map.nodes.keys.firstWhere((node) => deepEquals(node, key))
+      as YamlNode);
+}
+
+/// Returns the key in [map] that is equal to the provided [key] by the notion
+/// of deep equality.
+Object getKey(Map map, Object key) {
+  return map.keys.firstWhere((k) => deepEquals(k, key));
+}
+
+bool containsKey(Map map, Object key) {
+  try {
+    map.keys.firstWhere((node) => deepEquals(node, key));
+
+    return true;
+  } on StateError {
+    return false;
+  }
 }
