@@ -1,4 +1,6 @@
-A library for [YAML](www.yaml.org) manipulation
+# Yaml Editor
+
+A library for [YAML](https://yaml.org) manipulation while preserving comments.
 
 ## Usage
 
@@ -8,39 +10,21 @@ A simple usage example:
 import 'package:yaml_edit/yaml_edit.dart';
 
 void main() {
-  var yamlEditBuilder = YamlEditBuilder('{YAML: YAML}');
-  yamlEditBuilder.setIn(['YAML'], "YAML Ain't Markup Language");
-  print(yamlEditBuilder);
-  /// Expected output:
-  /// {YAML: YAML Ain't Markup Language}
+  final yamlEditor = YamlEditor('{YAML: YAML}');
+  yamlEditor.assign(['YAML'], "YAML Ain't Markup Language");
+  print(yamlEditor);
+  // Expected output:
+  // {YAML: YAML Ain't Markup Language}
 }
 ```
 
 ## Testing
 
-Testing is done in two strategies: Unit testing ([here](./test/mod_test.dart)) and
-Golden testing ([here](./test/mod_test_cases.dart)).
+Testing is done in two strategies: Unit testing (`/test/editor_test.dart`) and
+Golden testing (`/test/golden_test.dart`). More information on Golden testing
+and the input/output format can be found at `/test/testdata/README.md`.
 
-With Golden Testing, we define the test parameters, and compare it against output
-formed by previous iterations. Input files are found [here](./test/test_cases) and
-have the format:
-
-```
-INFORMATION (e.g. description) - parsed as text
----
-INPUT - parsed as YAML
----
-Modifications - parsed as YAML, must be a list.
-```
-
-The valid list of modifications are:
-
-- set [path] newValue
-- remove [path] newValue
-- add [path] newValue
-
-These tests are automatically run with `pub run test`. If a new test file is added,
-the test command wil automatically generate the golden file.
+These tests are automatically run with `pub run test`.
 
 ## Features and bugs
 

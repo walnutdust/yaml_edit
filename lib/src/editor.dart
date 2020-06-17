@@ -16,7 +16,7 @@ import './utils.dart';
 /// Note however that these settings only apply to portions of the YAML that are modified
 /// by this class.
 ///
-/// Most modification methods require the user to pass in an [Iterable<Object>] path that
+/// Most modification methods require the user to pass in an Iterable<Object> path that
 /// holds the keys/indices to navigate to the element. Key equality is performed via
 /// `package:yaml`'s [YamlMap]'s key equality.
 ///
@@ -33,7 +33,7 @@ import './utils.dart';
 ///
 /// To get to `7`, our path will be `['c', 2, 'f', 1]`. The path for the base object is the
 /// empty array `[]`. All modification methods will return a [ArgumentError] if the path
-/// provided is invalid. Note also that that the order of elements in [path] is important,
+/// provided is invalid. Note also that that the order of elements in the path is important,
 /// and it should be arranged in order of calling, with the first element being the first
 /// key or index to be called.
 ///
@@ -67,7 +67,7 @@ abstract class YamlEditor {
   /// [insertIntoList], because it preserves comments at the same level.
   ///
   /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
-  /// [RangeError] if [keyOrIndex] is negative or longer than list length).
+  /// [RangeError] if an index is negative or longer than list length).
   ///
   /// Users have the option of defining the indentation applied for this particular
   /// modification and whether flow structures will be applied via the optional parameter [style].
@@ -238,7 +238,7 @@ class YamlStringEditor implements YamlEditor {
   /// [insertIntoList], because it preserves comments at the same level.
   ///
   /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
-  /// [RangeError] if [keyOrIndex] is negative or longer than list length).
+  /// [RangeError] if and index is negative or longer than list length).
   ///
   /// Users have the option of defining the indentation applied for this particular
   /// modification and whether flow structures will be applied via the optional parameter [style].
