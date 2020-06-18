@@ -18,3 +18,7 @@ matrix:
 cache:
   directories:
     - "$HOME/.pub-cache"
+
+branches:
+  only:
+  - master

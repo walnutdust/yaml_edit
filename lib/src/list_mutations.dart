@@ -12,7 +12,7 @@ SourceEdit assignInList(
   final offset = currValue.span.start.offset;
   var valueString;
 
-  /// We do not use the [_formatNewBlock] since we want to only replace the contents
+  /// We do not use [_formatNewBlock] since we want to only replace the contents
   /// of this node while preserving comments/whitespace, while [_formatNewBlock]
   /// produces a string represnetation of a new node.
   if (list.style == CollectionStyle.BLOCK) {
@@ -100,7 +100,7 @@ SourceEdit _appendToBlockList(String yaml, YamlList list, Object elem) {
   return SourceEdit(list.span.end.offset, 0, formattedValue);
 }
 
-/// Formats [elem] for block lists.
+/// Formats [elem] into a new node for block lists.
 String _formatNewBlock(String yaml, YamlList list, Object elem) {
   final indentation = getListIndentation(yaml, list) + detectIndentation(yaml);
   final valueString = getBlockString(elem, indentation);
@@ -109,7 +109,7 @@ String _formatNewBlock(String yaml, YamlList list, Object elem) {
   return '$indentedHyphen$valueString\n';
 }
 
-/// Formats [elem] for flow lists.
+/// Formats [elem] into a new node for flow lists.
 String _formatNewFlow(YamlList list, Object elem, [bool isLast = false]) {
   var valueString = getFlowString(elem);
   if (list.isNotEmpty) {
@@ -120,7 +120,7 @@ String _formatNewFlow(YamlList list, Object elem, [bool isLast = false]) {
   return valueString;
 }
 
-/// Returns a [SourceEdit] describing the change to be made  on [yaml] to achieve the
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of inserting [elem] into [nodes] at [index], noting that this is a block
 /// list.
 ///
@@ -138,8 +138,9 @@ SourceEdit _insertInBlockList(
   return SourceEdit(start, 0, formattedValue);
 }
 
-/// Returns a [SourceEdit] describing the change to be made  on [yaml] to achieve the effect of insertion
-/// [elem] into [nodes] at [index], noting that this is a flow list.
+/// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
+/// effect of inserting [elem] into [nodes] at [index], noting that this is a flow
+/// list.
 ///
 /// [index] should be non-negative and less than or equal to [length].
 SourceEdit _insertInFlowList(
@@ -158,6 +159,8 @@ SourceEdit _insertInFlowList(
 
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of removing [nodeToRemove] from [nodes], noting that this is a block list.
+///
+/// [index] should be non-negative and less than or equal to [length].
 SourceEdit _removeFromBlockList(
     String yaml, YamlList list, YamlNode removedNode, int index) {
   /// If we are removing the last element in a block list, convert it into a flow
@@ -181,6 +184,8 @@ SourceEdit _removeFromBlockList(
 
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of removing [nodeToRemove] from [nodes], noting that this is a flow list.
+///
+/// [index] should be non-negative and less than or equal to [length].
 SourceEdit _removeFromFlowList(
     String yaml, YamlList list, YamlNode nodeToRemove, int index) {
   final span = nodeToRemove.span;

@@ -136,7 +136,7 @@ String getBlockScalar(Object value, int indentation,
   }
 
   /// The remainder of the possibilities are similar to how [getFlowScalar]
-  /// treats [value]
+  /// treats [value].
   return getFlowScalar(value);
 }
 

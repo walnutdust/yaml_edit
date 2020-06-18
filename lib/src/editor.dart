@@ -13,10 +13,6 @@ import 'wrap.dart';
 /// An interface for modififying [YAML][1] documents while preserving comments and
 /// whitespaces.
 ///
-/// Users may define the default settings to be applied to these YAML modifications.
-/// Note however that these settings only apply to portions of the YAML that are modified
-/// by this class.
-///
 /// Most modification methods require the user to pass in an Iterable<Object> path that
 /// holds the keys/indices to navigate to the element. Key equality is performed via
 /// `package:yaml`'s [YamlMap]'s key equality.
@@ -64,30 +60,18 @@ abstract class YamlEditor {
   ///
   /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
   /// [RangeError] if an index is negative or longer than list length).
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void assign(Iterable<Object> path, Object value);
 
   /// Appends [value] into the list at [listPath].
   ///
   /// If the element at the given path is not a [YamlList] or if the path is invalid, an
   /// [ArgumentError] will be thrown.
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void appendToList(Iterable<Object> listPath, Object value);
 
   /// Prepends [value] into the list at [listPath].
   ///
   /// If the element at the given path is not a [YamlList] or if the path is invalid, an
   /// [ArgumentError] will be thrown.
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void prependToList(Iterable<Object> listPath, Object value);
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
@@ -96,18 +80,14 @@ abstract class YamlEditor {
   /// [index] must be non-negative and no greater than the list's length. If the element at
   /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
   /// be thrown.
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   void insertIntoList(Iterable<Object> listPath, int index, Object value);
 
   /// Changes the contents of the list at [listPath] by removing [deleteCount] items at [index], and
   /// inserts [values] in-place.
   ///
   /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
-  /// be thrown.
+  /// the given path is not a [YamlList], if the path is invalid, or if [index] + [deleteCount]
+  /// is greater than the list length, an [ArgumentError] will be thrown.
   Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
       int deleteCount, Iterable<Object> values);
 
@@ -221,17 +201,13 @@ class YamlStringEditor implements YamlEditor {
     }
   }
 
-  /// Sets [value] in the [path], with an optional [style] parameter applied to only this modification.
+  /// Sets [value] in the [path].
   ///
   /// Note that [assign] provides a different result as compared to a [remove] followed by an
   /// [insertIntoList], because it preserves comments at the same level.
   ///
   /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
   /// [RangeError] if and index is negative or longer than list length).
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   ///
   /// ```dart
   /// final doc = YamlEditor('''
@@ -304,10 +280,6 @@ class YamlStringEditor implements YamlEditor {
   ///
   /// If the element at the given path is not a [YamlList] or if the path is invalid, an
   /// [ArgumentError] will be thrown.
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
   void appendToList(Iterable<Object> listPath, Object value) {
     var yamlList = _traverseToList(listPath);
@@ -319,10 +291,6 @@ class YamlStringEditor implements YamlEditor {
   ///
   /// If the element at the given path is not a [YamlList] or if the path is invalid, an
   /// [ArgumentError] will be thrown.
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
   void prependToList(Iterable<Object> listPath, Object value) =>
       insertIntoList(listPath, 0, value);
@@ -333,10 +301,6 @@ class YamlStringEditor implements YamlEditor {
   /// [index] must be non-negative and no greater than the list's length. If the element at
   /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
   /// be thrown.
-  ///
-  /// Users have the option of defining the indentation applied for this particular
-  /// modification and whether flow structures will be applied via the optional parameter [style].
-  /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
   void insertIntoList(Iterable<Object> listPath, int index, Object value) {
     var list = _traverseToList(listPath);
@@ -523,8 +487,7 @@ $expectedTree''');
           (nodes) =>
               nodes[index] = _deepModify(nodes[index], nextPath, expectedNode));
     } else if (tree is YamlMap) {
-      final key = path.first;
-      final keyNode = yamlNodeFrom(key);
+      final keyNode = yamlNodeFrom(path.first);
       return updatedYamlMap(
           tree,
           (nodes) => nodes[keyNode] =

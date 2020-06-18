@@ -11,8 +11,6 @@ void main() {
             scalarStyle: ScalarStyle.SINGLE_QUOTED),
         yamlNodeFrom('double-quoted string',
             scalarStyle: ScalarStyle.DOUBLE_QUOTED),
-        yamlNodeFrom('folded string', scalarStyle: ScalarStyle.FOLDED),
-        yamlNodeFrom('literal string', scalarStyle: ScalarStyle.LITERAL),
       ]));
   print(doc);
 }

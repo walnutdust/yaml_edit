@@ -24,7 +24,7 @@ SourceEdit assignInMap(String yaml, YamlMap map, Object key, Object newValue) {
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of removing
-/// the element at [key] to [newValue] when re-parsed.
+/// the element at [key] when re-parsed.
 SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
   if (!containsKey(map, key)) return null;
 
@@ -47,7 +47,7 @@ YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
   update(dummyMap);
   final updatedMap = {};
 
-  /// This workaround is necessary since `_yamlNodeFrom` will re-wrap `YamlNodes`,
+  /// This workaround is necessary since [yamlNodeFrom] will re-wrap [YamlNode]s,
   /// so we need to unwrap them before passing them in.
   for (var key in dummyMap.keys) {
     updatedMap[key.value] = dummyMap[key].value;
