@@ -3,11 +3,12 @@ import 'dart:collection' show UnmodifiableListView;
 import 'package:meta/meta.dart';
 import 'package:yaml/yaml.dart';
 
-import './list_mutations.dart';
-import './map_mutations.dart';
-import './source_edit.dart';
-import './style.dart';
-import './utils.dart';
+import 'equality.dart';
+import 'list_mutations.dart';
+import 'map_mutations.dart';
+import 'source_edit.dart';
+import 'style.dart';
+import 'utils.dart';
 
 /// An interface for modififying [YAML][1] documents while preserving comments and
 /// whitespaces.
@@ -294,7 +295,6 @@ class YamlStringEditor implements YamlEditor {
     var expectedNode;
 
     final valueNode = yamlNodeFrom(value);
-
     style ??= defaultStyle;
 
     if (parentNode is YamlList) {

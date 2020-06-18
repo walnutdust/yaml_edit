@@ -1,5 +1,9 @@
-import 'package:yaml/src/equality.dart' as yaml_equality;
+import 'dart:collection' as collection;
+import 'package:collection/collection.dart';
+import 'package:source_span/source_span.dart';
 import 'package:yaml/yaml.dart';
+
+import 'equality.dart';
 
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
 /// `false` otherwise.
@@ -106,15 +110,17 @@ int getContentSensitiveEnd(YamlNode yamlNode) {
 bool isCollection(Object item) => item is Map || item is List;
 
 /// Wraps [value] into a [YamlNode].
-YamlNode yamlNodeFrom(Object value) {
+YamlNode yamlNodeFrom(Object value,
+    {CollectionStyle collectionStyle = CollectionStyle.ANY,
+    ScalarStyle scalarStyle = ScalarStyle.ANY}) {
   if (value is YamlNode) {
     return value;
   } else if (value is Map) {
-    return YamlMap.wrap(value);
+    return YamlMapWrap(value, collectionStyle: collectionStyle);
   } else if (value is List) {
-    return YamlList.wrap(value);
+    return YamlListWrap(value, collectionStyle: collectionStyle);
   } else {
-    return YamlScalar.wrap(value);
+    return YamlScalarWrap(value, style: scalarStyle);
   }
 }
 
@@ -123,57 +129,107 @@ bool isValidIndex(Object index, int length) {
   return index is int && index >= 0 && index < length;
 }
 
-/// Compares two [Object]s for deep equality, extending from `package:yaml`'s deep
-/// equality notation to allow for comparison of non scalar map keys.
-bool deepEquals(Object obj1, Object obj2) {
-  if (obj1 is Map && obj2 is Map) {
-    return mapDeepEquals(obj1, obj2);
+/// Internal class that allows us to define a constructor on [YamlScalar]
+/// which takes in [style] as an argument.
+class YamlScalarWrap implements YamlScalar {
+  /// The [ScalarStyle] to be used for the scalar.
+  @override
+  final ScalarStyle style;
+
+  @override
+  final SourceSpan span = null;
+
+  @override
+  final dynamic value;
+
+  YamlScalarWrap(this.value, {this.style = ScalarStyle.ANY}) {
+    ArgumentError.checkNotNull(style, 'scalarStyle');
   }
 
-  return yaml_equality.deepEquals(obj1, obj2);
+  @override
+  String toString() => value.toString();
 }
 
-/// Compares two [Map]s for deep equality, extending from `package:yaml`'s deep
-/// equality notation to allow for comparison of non scalar map keys.
-bool mapDeepEquals(Map map1, Map map2) {
-  if (map1.length != map2.length) return false;
+/// Internal class that allows us to define a constructor on [YamlMap]
+/// which takes in [style] as an argument.
+class YamlMapWrap
+    with collection.MapMixin, UnmodifiableMapMixin
+    implements YamlMap {
+  /// The [CollectionStyle] to be used for the map.
+  @override
+  final CollectionStyle style;
 
-  for (var key in map1.keys) {
-    if (!containsKey(map2, key)) {
-      return false;
+  @override
+  final Map<dynamic, YamlNode> nodes;
+
+  @override
+  final SourceSpan span = null;
+
+  factory YamlMapWrap(Map dartMap,
+      {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
+    ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
+
+    var wrappedMap = deepEqualsMap<dynamic, YamlNode>();
+
+    for (var entry in dartMap.entries) {
+      var wrappedKey = yamlNodeFrom(entry.key);
+      var wrappedValue = yamlNodeFrom(entry.value);
+      wrappedMap[wrappedKey] = wrappedValue;
     }
-
-    /// Because two keys may be equal by deep equality but using one key on the
-    /// other map might not get a hit.
-    final key2 = getKey(map2, key);
-
-    if (!deepEquals(map1[key], map2[key2])) {
-      return false;
-    }
+    return YamlMapWrap._(wrappedMap, style: collectionStyle);
   }
 
-  return true;
+  YamlMapWrap._(this.nodes, {this.style = CollectionStyle.ANY});
+
+  @override
+  dynamic operator [](Object key) => nodes[key]?.value;
+
+  @override
+  Iterable get keys => nodes.keys.map((node) => node.value);
+
+  @override
+  Map get value => this;
 }
 
-/// Returns the [YamlNode] corresponding to the provided [key].
-YamlNode getKeyNode(YamlMap map, Object key) {
-  return (map.nodes.keys.firstWhere((node) => deepEquals(node, key))
-      as YamlNode);
-}
+/// Internal class that allows us to define a constructor on [YamlList]
+/// which takes in [style] as an argument.
+class YamlListWrap with collection.ListMixin implements YamlList {
+  /// The [CollectionStyle] to be used for the list.
+  @override
+  final CollectionStyle style;
 
-/// Returns the key in [map] that is equal to the provided [key] by the notion
-/// of deep equality.
-Object getKey(Map map, Object key) {
-  return map.keys.firstWhere((k) => deepEquals(k, key));
-}
+  @override
+  final List<YamlNode> nodes;
 
-/// Checks if [map] has any keys equal to the provided [key] by deep equality.
-bool containsKey(Map map, Object key) {
-  try {
-    map.keys.firstWhere((node) => deepEquals(node, key));
+  @override
+  final SourceSpan span = null;
 
-    return true;
-  } on StateError {
-    return false;
+  @override
+  int get length => nodes.length;
+
+  @override
+  set length(int index) {
+    throw UnsupportedError('Cannot modify an unmodifiable List');
   }
+
+  factory YamlListWrap(List dartList,
+      {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
+    ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
+
+    final wrappedList = dartList.map((v) => yamlNodeFrom(v)).toList();
+    return YamlListWrap._(wrappedList, style: collectionStyle);
+  }
+
+  YamlListWrap._(this.nodes, {this.style = CollectionStyle.ANY});
+
+  @override
+  dynamic operator [](int index) => nodes[index].value;
+
+  @override
+  operator []=(int index, value) {
+    throw UnsupportedError('Cannot modify an unmodifiable List');
+  }
+
+  @override
+  List get value => this;
 }

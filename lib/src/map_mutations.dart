@@ -1,9 +1,9 @@
-import 'package:yaml/src/equality.dart' show deepEqualsMap;
 import 'package:yaml/yaml.dart';
 
-import './source_edit.dart';
-import './style.dart';
-import './utils.dart';
+import 'equality.dart';
+import 'source_edit.dart';
+import 'style.dart';
+import 'utils.dart';
 
 /// Performs the string operation on [yaml] to achieve the effect of setting
 /// the element at [key] to [newValue] when re-parsed.

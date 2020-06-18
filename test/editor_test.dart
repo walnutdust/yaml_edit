@@ -62,28 +62,28 @@ recipe:
       final doc = YamlEditor('{a: 4}');
       final path = ['b'];
 
-      expect(() => doc.parseAt(path), throwsA(isA<ArgumentError>()));
+      expect(() => doc.parseAt(path), throwsArgumentError);
     });
 
     test('throws ArgumentError if path tries to go deeper into a scalar', () {
       final doc = YamlEditor('{a: 4}');
       final path = ['a', 'b'];
 
-      expect(() => doc.parseAt(path), throwsA(isA<ArgumentError>()));
+      expect(() => doc.parseAt(path), throwsArgumentError);
     });
 
     test('throws ArgumentError if index is out of bounds', () {
       final doc = YamlEditor('[0,1]');
       final path = [2];
 
-      expect(() => doc.parseAt(path), throwsA(isA<ArgumentError>()));
+      expect(() => doc.parseAt(path), throwsArgumentError);
     });
 
     test('throws ArgumentError if index is not an integer', () {
       final doc = YamlEditor('[0,1]');
       final path = ['2'];
 
-      expect(() => doc.parseAt(path), throwsA(isA<ArgumentError>()));
+      expect(() => doc.parseAt(path), throwsArgumentError);
     });
 
     group('returns a YamlNode', () {
@@ -238,7 +238,7 @@ c: 3
     test('throw ArgumentError in list if attempting to set a key of a scalar',
         () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.assign([0, 'a'], 'a'), throwsA(isA<ArgumentError>()));
+      expect(() => doc.assign([0, 'a'], 'a'), throwsArgumentError);
     });
 
     test('simple block map', () {
@@ -806,7 +806,7 @@ b: 2
 c: 3
 ''');
 
-      expect(() => doc.remove(['a', 0]), throwsA(isA<ArgumentError>()));
+      expect(() => doc.remove(['a', 0]), throwsArgumentError);
     });
 
     test('throws ArgumentError if collectionPath is invalid', () {
@@ -816,7 +816,7 @@ b: 2
 c: 3
 ''');
 
-      expect(() => doc.remove(['d']), throwsA(isA<ArgumentError>()));
+      expect(() => doc.remove(['d']), throwsArgumentError);
     });
 
     test('throws ArgumentError if collectionPath is invalid - list', () {
@@ -824,7 +824,7 @@ c: 3
 [1, 2, 3]
 ''');
 
-      expect(() => doc.remove([4]), throwsA(isA<ArgumentError>()));
+      expect(() => doc.remove([4]), throwsArgumentError);
     });
 
     test('empty path should clear string', () {
@@ -1039,12 +1039,12 @@ c: 3
   group('appendToList', () {
     test('throws ArgumentError if it is a map', () {
       final doc = YamlEditor('a:1');
-      expect(() => doc.appendToList([], 4), throwsA(isA<ArgumentError>()));
+      expect(() => doc.appendToList([], 4), throwsArgumentError);
     });
 
     test('throws ArgumentError if it is a scalar', () {
       final doc = YamlEditor('1');
-      expect(() => doc.appendToList([], 4), throwsA(isA<ArgumentError>()));
+      expect(() => doc.appendToList([], 4), throwsArgumentError);
     });
 
     test('simple block list ', () {
@@ -1156,12 +1156,12 @@ c: 3
   group('prependToList', () {
     test('throws ArgumentError if it is a map', () {
       final doc = YamlEditor('a:1');
-      expect(() => doc.prependToList([], 4), throwsA(isA<ArgumentError>()));
+      expect(() => doc.prependToList([], 4), throwsArgumentError);
     });
 
     test('throws ArgumentError if it is a scalar', () {
       final doc = YamlEditor('1');
-      expect(() => doc.prependToList([], 4), throwsA(isA<ArgumentError>()));
+      expect(() => doc.prependToList([], 4), throwsArgumentError);
     });
 
     test('simple flow list', () {
@@ -1291,12 +1291,12 @@ a: # comments
   group('insertIntoList', () {
     test('throws ArgumentError if it is a map', () {
       final doc = YamlEditor('a:1');
-      expect(() => doc.insertIntoList([], 0, 4), throwsA(isA<ArgumentError>()));
+      expect(() => doc.insertIntoList([], 0, 4), throwsArgumentError);
     });
 
     test('throws ArgumentError if it is a scalar', () {
       final doc = YamlEditor('1');
-      expect(() => doc.insertIntoList([], 0, 4), throwsA(isA<ArgumentError>()));
+      expect(() => doc.insertIntoList([], 0, 4), throwsArgumentError);
     });
 
     test('simple flow list', () {
@@ -1399,8 +1399,7 @@ a: # comments
         'throws ArgumentError if invalid index + deleteCount combination is passed in',
         () {
       final doc = YamlEditor('[0, 0]');
-      expect(() => doc.spliceList([], 1, 5, [1, 2]),
-          throwsA(isA<ArgumentError>()));
+      expect(() => doc.spliceList([], 1, 5, [1, 2]), throwsArgumentError);
     });
 
     test('simple block list', () {

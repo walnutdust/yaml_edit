@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:yaml_edit/src/utils.dart';
+import 'package:yaml_edit/src/equality.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
 /// Asserts that a string containing a single YAML document is unchanged
@@ -20,3 +20,5 @@ void expectDeepEquals(Object actual, Object expected) {
   expect(
       actual, predicate((actual) => deepEquals(actual, expected), '$expected'));
 }
+
+Matcher notEquals(dynamic expected) => isNot(equals(expected));
