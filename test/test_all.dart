@@ -3,13 +3,11 @@ import 'package:test/test.dart';
 import 'editor_test.dart' as editor;
 import 'golden_test.dart' as golden;
 import 'source_edit_test.dart' as source;
-import 'style_test.dart' as style;
-import 'utils_test.dart' as utils;
+import 'wrap_test.dart' as wrap;
 
 void main() async {
   await golden.main();
   group('editor', editor.main);
   group('source_edit', source.main);
-  group('style', style.main);
-  group('utils', utils.main);
+  group('wrap', wrap.main);
 }

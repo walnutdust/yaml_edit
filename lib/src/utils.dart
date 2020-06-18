@@ -1,9 +1,7 @@
-import 'dart:collection' as collection;
-import 'package:collection/collection.dart';
-import 'package:source_span/source_span.dart';
-import 'package:yaml/yaml.dart';
+import 'dart:collection';
 
-import 'equality.dart';
+import 'package:yaml/yaml.dart';
+import 'package:yaml_edit/src/list_mutations.dart';
 
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
 /// `false` otherwise.
@@ -109,127 +107,78 @@ int getContentSensitiveEnd(YamlNode yamlNode) {
 /// Checks if the item is a Map or a List
 bool isCollection(Object item) => item is Map || item is List;
 
-/// Wraps [value] into a [YamlNode].
-YamlNode yamlNodeFrom(Object value,
-    {CollectionStyle collectionStyle = CollectionStyle.ANY,
-    ScalarStyle scalarStyle = ScalarStyle.ANY}) {
-  if (value is YamlNode) {
-    return value;
-  } else if (value is Map) {
-    return YamlMapWrap(value, collectionStyle: collectionStyle);
-  } else if (value is List) {
-    return YamlListWrap(value, collectionStyle: collectionStyle);
-  } else {
-    return YamlScalarWrap(value, style: scalarStyle);
-  }
-}
+/// Gets the indentation level of the map. This is 0 if it is a flow map,
+/// but returns the number of spaces before the keys for block maps.
+int getMapIndentation(String yaml, YamlMap map) {
+  if (map.style == CollectionStyle.FLOW) return 0;
 
-/// Checks if [index] is [int], >=0, < [length]
-bool isValidIndex(Object index, int length) {
-  return index is int && index >= 0 && index < length;
-}
-
-/// Internal class that allows us to define a constructor on [YamlScalar]
-/// which takes in [style] as an argument.
-class YamlScalarWrap implements YamlScalar {
-  /// The [ScalarStyle] to be used for the scalar.
-  @override
-  final ScalarStyle style;
-
-  @override
-  final SourceSpan span = null;
-
-  @override
-  final dynamic value;
-
-  YamlScalarWrap(this.value, {this.style = ScalarStyle.ANY}) {
-    ArgumentError.checkNotNull(style, 'scalarStyle');
+  /// An empty block map doesn't really exist.
+  if (map.isEmpty) {
+    throw UnsupportedError('Unable to get indentation for empty block list');
   }
 
-  @override
-  String toString() => value.toString();
+  /// Use the number of spaces between the last key and the newline as indentation.
+  final lastKey = map.nodes.keys.last as YamlNode;
+  final lastSpanOffset = lastKey.span.start.offset;
+  final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
+  if (lastNewLine == -1) return lastSpanOffset;
+
+  return lastSpanOffset - lastNewLine - 1;
 }
 
-/// Internal class that allows us to define a constructor on [YamlMap]
-/// which takes in [style] as an argument.
-class YamlMapWrap
-    with collection.MapMixin, UnmodifiableMapMixin
-    implements YamlMap {
-  /// The [CollectionStyle] to be used for the map.
-  @override
-  final CollectionStyle style;
+/// Gets the indentation level of the list. This is 0 if it is a flow list,
+/// but returns the number of spaces before the hyphen of elements for
+/// block lists.
+///
+/// Throws [UnsupportedError] if an empty block map is passed in.
+int getListIndentation(String yaml, YamlList list) {
+  if (list.style == CollectionStyle.FLOW) return 0;
 
-  @override
-  final Map<dynamic, YamlNode> nodes;
+  /// An empty block map doesn't really exist.
+  if (list.isEmpty) {
+    throw UnsupportedError('Unable to get indentation for empty block list');
+  }
 
-  @override
-  final SourceSpan span = null;
+  final lastSpanOffset = list.nodes.last.span.start.offset;
+  final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
+  final lastHyphen = yaml.lastIndexOf('-', lastSpanOffset);
 
-  factory YamlMapWrap(Map dartMap,
-      {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
-    ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
+  if (lastNewLine == -1) return lastHyphen;
 
-    var wrappedMap = deepEqualsMap<dynamic, YamlNode>();
+  return lastHyphen - lastNewLine - 1;
+}
 
-    for (var entry in dartMap.entries) {
-      var wrappedKey = yamlNodeFrom(entry.key);
-      var wrappedValue = yamlNodeFrom(entry.value);
-      wrappedMap[wrappedKey] = wrappedValue;
+/// Returns the detected indentation level used for this YAML document, or defaults
+/// to a value of `2` if no indentation level can be detected.
+///
+/// Indentation level is determined by the difference in indentation of the first
+/// block-styled yaml collection in the second level as compared to the top-level
+/// elements. In the case where there are multiple possible candidates, we choose
+/// the candidate closest to the start of [yaml].
+///
+/// [yaml] must be a valid YAML document as defined by `package:yaml`.
+int detectIndentation(String yaml) {
+  final node = loadYamlNode(yaml);
+  var children;
+
+  if (node is YamlMap && node.style == CollectionStyle.BLOCK) {
+    children = node.nodes.values;
+  } else if (node is YamlList && node.style == CollectionStyle.BLOCK) {
+    children = node.nodes;
+  }
+
+  if (children != null) {
+    for (var child in children) {
+      var indentation = 0;
+      if (child is YamlList) {
+        indentation = getListIndentation(yaml, child);
+      } else if (child is YamlMap) {
+        indentation = getMapIndentation(yaml, child);
+      }
+
+      if (indentation != 0) return indentation;
     }
-    return YamlMapWrap._(wrappedMap, style: collectionStyle);
   }
 
-  YamlMapWrap._(this.nodes, {this.style = CollectionStyle.ANY});
-
-  @override
-  dynamic operator [](Object key) => nodes[key]?.value;
-
-  @override
-  Iterable get keys => nodes.keys.map((node) => node.value);
-
-  @override
-  Map get value => this;
-}
-
-/// Internal class that allows us to define a constructor on [YamlList]
-/// which takes in [style] as an argument.
-class YamlListWrap with collection.ListMixin implements YamlList {
-  /// The [CollectionStyle] to be used for the list.
-  @override
-  final CollectionStyle style;
-
-  @override
-  final List<YamlNode> nodes;
-
-  @override
-  final SourceSpan span = null;
-
-  @override
-  int get length => nodes.length;
-
-  @override
-  set length(int index) {
-    throw UnsupportedError('Cannot modify an unmodifiable List');
-  }
-
-  factory YamlListWrap(List dartList,
-      {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
-    ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
-
-    final wrappedList = dartList.map((v) => yamlNodeFrom(v)).toList();
-    return YamlListWrap._(wrappedList, style: collectionStyle);
-  }
-
-  YamlListWrap._(this.nodes, {this.style = CollectionStyle.ANY});
-
-  @override
-  dynamic operator [](int index) => nodes[index].value;
-
-  @override
-  operator []=(int index, value) {
-    throw UnsupportedError('Cannot modify an unmodifiable List');
-  }
-
-  @override
-  List get value => this;
+  return 2;
 }

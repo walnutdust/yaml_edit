@@ -7,8 +7,8 @@ import 'equality.dart';
 import 'list_mutations.dart';
 import 'map_mutations.dart';
 import 'source_edit.dart';
-import 'style.dart';
 import 'utils.dart';
+import 'wrap.dart';
 
 /// An interface for modififying [YAML][1] documents while preserving comments and
 /// whitespaces.
@@ -47,12 +47,7 @@ abstract class YamlEditor {
   /// YAML string thus far.
   UnmodifiableListView<SourceEdit> get edits;
 
-  /// Style configuration settings for [YamlEditor] when modifying the YAML string.
-  YamlStyle get defaultStyle;
-
-  factory YamlEditor(String yaml,
-          {YamlStyle defaultStyle = const YamlStyle()}) =>
-      YamlStringEditor(yaml, defaultStyle: defaultStyle);
+  factory YamlEditor(String yaml) => YamlStringEditor(yaml);
 
   /// Parses the document to return [YamlNode] currently present at [path]. If no [YamlNode]s exist
   /// at [path], [parseAt] will return a [YamlNode]-wrapped [orElse] if it is defined, or throw an
@@ -73,7 +68,7 @@ abstract class YamlEditor {
   /// Users have the option of defining the indentation applied for this particular
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
-  void assign(Iterable<Object> path, Object value, {YamlStyle style});
+  void assign(Iterable<Object> path, Object value);
 
   /// Appends [value] into the list at [listPath].
   ///
@@ -83,7 +78,7 @@ abstract class YamlEditor {
   /// Users have the option of defining the indentation applied for this particular
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
-  void appendToList(Iterable<Object> listPath, Object value, {YamlStyle style});
+  void appendToList(Iterable<Object> listPath, Object value);
 
   /// Prepends [value] into the list at [listPath].
   ///
@@ -93,8 +88,7 @@ abstract class YamlEditor {
   /// Users have the option of defining the indentation applied for this particular
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
-  void prependToList(Iterable<Object> listPath, Object value,
-      {YamlStyle style});
+  void prependToList(Iterable<Object> listPath, Object value);
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list.
@@ -106,8 +100,7 @@ abstract class YamlEditor {
   /// Users have the option of defining the indentation applied for this particular
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
-  void insertIntoList(Iterable<Object> listPath, int index, Object value,
-      {YamlStyle style});
+  void insertIntoList(Iterable<Object> listPath, int index, Object value);
 
   /// Changes the contents of the list at [listPath] by removing [deleteCount] items at [index], and
   /// inserts [values] in-place.
@@ -116,8 +109,7 @@ abstract class YamlEditor {
   /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
   /// be thrown.
   Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
-      int deleteCount, Iterable<Object> values,
-      {YamlStyle style});
+      int deleteCount, Iterable<Object> values);
 
   /// Removes the node at [path].
   ///
@@ -151,11 +143,7 @@ class YamlStringEditor implements YamlEditor {
   @override
   String toString() => _yaml;
 
-  /// Style configuration settings for [YamlEditor] when modifying the YAML string.
-  @override
-  final YamlStyle defaultStyle;
-
-  YamlStringEditor(this._yaml, {this.defaultStyle = const YamlStyle()}) {
+  YamlStringEditor(this._yaml) {
     _contents = loadYamlNode(_yaml);
   }
 
@@ -278,7 +266,7 @@ class YamlStringEditor implements YamlEditor {
   ///   - 2
   /// ```
   @override
-  void assign(Iterable<Object> path, Object value, {YamlStyle style}) {
+  void assign(Iterable<Object> path, Object value) {
     if (path.isEmpty) {
       final end = getContentSensitiveEnd(_contents);
       final edit = SourceEdit(0, end, getFlowString(value));
@@ -295,14 +283,13 @@ class YamlStringEditor implements YamlEditor {
     var expectedNode;
 
     final valueNode = yamlNodeFrom(value);
-    style ??= defaultStyle;
 
     if (parentNode is YamlList) {
-      edit = assignInList(_yaml, parentNode, keyOrIndex, value, style);
+      edit = assignInList(_yaml, parentNode, keyOrIndex, value);
       expectedNode =
           updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
     } else if (parentNode is YamlMap) {
-      edit = assignInMap(_yaml, parentNode, keyOrIndex, value, style);
+      edit = assignInMap(_yaml, parentNode, keyOrIndex, value);
       final keyNode = yamlNodeFrom(keyOrIndex);
       expectedNode =
           updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode);
@@ -322,11 +309,10 @@ class YamlStringEditor implements YamlEditor {
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
-  void appendToList(Iterable<Object> listPath, Object value,
-      {YamlStyle style}) {
+  void appendToList(Iterable<Object> listPath, Object value) {
     var yamlList = _traverseToList(listPath);
 
-    insertIntoList(listPath, yamlList.length, value, style: style);
+    insertIntoList(listPath, yamlList.length, value);
   }
 
   /// Prepends [value] into the list at [listPath].
@@ -338,9 +324,8 @@ class YamlStringEditor implements YamlEditor {
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
-  void prependToList(Iterable<Object> listPath, Object value,
-          {YamlStyle style}) =>
-      insertIntoList(listPath, 0, value, style: style);
+  void prependToList(Iterable<Object> listPath, Object value) =>
+      insertIntoList(listPath, 0, value);
 
   /// Inserts [value] into the list at [listPath], only if the element at the given path
   /// is a list.
@@ -353,12 +338,9 @@ class YamlStringEditor implements YamlEditor {
   /// modification and whether flow structures will be applied via the optional parameter [style].
   /// For a comprehensive list of styling options, refer to the documentation for [YamlStyle].
   @override
-  void insertIntoList(Iterable<Object> listPath, int index, Object value,
-      {YamlStyle style}) {
-    style ??= defaultStyle;
-
+  void insertIntoList(Iterable<Object> listPath, int index, Object value) {
     var list = _traverseToList(listPath);
-    final edit = insertInList(_yaml, list, index, value, style);
+    final edit = insertInList(_yaml, list, index, value);
 
     final expectedList = updatedYamlList(
         list, (nodes) => nodes.insert(index, yamlNodeFrom(value)));
@@ -380,9 +362,7 @@ class YamlStringEditor implements YamlEditor {
   /// ```
   @override
   Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
-      int deleteCount, Iterable<Object> values,
-      {YamlStyle style}) {
-    style ??= defaultStyle;
+      int deleteCount, Iterable<Object> values) {
     var list = _traverseToList(listPath);
 
     final nodesToRemove = list.nodes.getRange(index, index + deleteCount);
@@ -394,7 +374,7 @@ class YamlStringEditor implements YamlEditor {
     /// Reverse [values] and insert them.
     final reversedValues = values.toList().reversed;
     for (var value in reversedValues) {
-      insertIntoList(listPath, index, value, style: style);
+      insertIntoList(listPath, index, value);
     }
 
     for (var i = 0; i < deleteCount; i++) {
