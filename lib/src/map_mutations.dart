@@ -106,7 +106,7 @@ SourceEdit _replaceInBlockMap(
   final newIndentation = getMapIndentation(yaml, map) + detectIndentation(yaml);
   final value = map.nodes[key];
   final keyNode = getKeyNode(map, key);
-  var valueString = getBlockString(newValue, newIndentation);
+  final valueString = getBlockString(newValue, newIndentation);
 
   /// +2 accounts for the colon
   final start = keyNode.span.end.offset + 2;

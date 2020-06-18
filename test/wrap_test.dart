@@ -170,7 +170,7 @@ void main() {
         'returns the same result for two YamlScalars with same value but different styles',
         () {
       var hashCode1 =
-          deepHashCode(yamlNodeFrom('foo', scalarStyle: ScalarStyle.FOLDED));
+          deepHashCode(yamlNodeFrom('foo', scalarStyle: ScalarStyle.PLAIN));
       var hashCode2 =
           deepHashCode(yamlNodeFrom('foo', scalarStyle: ScalarStyle.LITERAL));
 

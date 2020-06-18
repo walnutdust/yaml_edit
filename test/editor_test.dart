@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:yaml_edit/src/wrap.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 import 'package:yaml/yaml.dart';
 
@@ -228,11 +229,6 @@ c: 3
     test('throw RangeError in list if index is larger than list length', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
       expect(() => doc.assign([2], 'hi'), throwsRangeError);
-    });
-
-    test('throw TypeError in list if index is larger than list length', () {
-      final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.assign(['a'], 'a'), throwsA(isA<TypeError>()));
     });
 
     test('throw ArgumentError in list if attempting to set a key of a scalar',
