@@ -65,7 +65,7 @@ c:
       test('flow map with style', () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
         doc.assign(['YAML'],
-            yamlNodeFrom('hi', scalarStyle: ScalarStyle.DOUBLE_QUOTED));
+            wrapAsYamlNode('hi', scalarStyle: ScalarStyle.DOUBLE_QUOTED));
 
         expect(doc.toString(), equals('{YAML: "hi"}'));
         expectYamlBuilderValue(doc, {'YAML': 'hi'});
@@ -84,7 +84,7 @@ c:
       test('prevents block scalars in flow map', () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
         doc.assign(
-            ['YAML'], yamlNodeFrom('hi', scalarStyle: ScalarStyle.FOLDED));
+            ['YAML'], wrapAsYamlNode('hi', scalarStyle: ScalarStyle.FOLDED));
 
         expect(doc.toString(), equals('{YAML: hi}'));
         expectYamlBuilderValue(doc, {'YAML': 'hi'});
@@ -94,7 +94,7 @@ c:
           () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
         doc.assign(
-            ['YAML'], yamlNodeFrom('> hi', scalarStyle: ScalarStyle.PLAIN));
+            ['YAML'], wrapAsYamlNode('> hi', scalarStyle: ScalarStyle.PLAIN));
 
         expect(doc.toString(), equals('{YAML: \'> hi\'}'));
         expectYamlBuilderValue(doc, {'YAML': '> hi'});
@@ -103,7 +103,7 @@ c:
       test('list in map', () {
         final doc = YamlEditor('''YAML: YAML Ain't Markup Language''');
         doc.assign(['YAML'],
-            yamlNodeFrom([1, 2, 3], collectionStyle: CollectionStyle.FLOW));
+            wrapAsYamlNode([1, 2, 3], collectionStyle: CollectionStyle.FLOW));
 
         expect(doc.toString(), equals('YAML: [1, 2, 3]'));
         expectYamlBuilderValue(doc, {
@@ -115,7 +115,7 @@ c:
         final doc = YamlEditor('''YAML: YAML Ain't Markup Language''');
         doc.assign(
             ['YAML'],
-            yamlNodeFrom({'YAML': "YAML Ain't Markup Language"},
+            wrapAsYamlNode({'YAML': "YAML Ain't Markup Language"},
                 collectionStyle: CollectionStyle.FLOW));
 
         expect(
@@ -129,10 +129,10 @@ c:
         final doc = YamlEditor('- 0');
         doc.assign(
             [0],
-            yamlNodeFrom([
+            wrapAsYamlNode([
               1,
               2,
-              yamlNodeFrom([3, 4], collectionStyle: CollectionStyle.FLOW),
+              wrapAsYamlNode([3, 4], collectionStyle: CollectionStyle.FLOW),
               5
             ]));
 
@@ -156,13 +156,13 @@ c:
         final doc = YamlEditor('- 0');
         doc.assign(
             [0],
-            yamlNodeFrom([
-              yamlNodeFrom('plain string', scalarStyle: ScalarStyle.PLAIN),
+            wrapAsYamlNode([
+              wrapAsYamlNode('plain string', scalarStyle: ScalarStyle.PLAIN),
               // yamlNodeFrom('folded string', scalarStyle: ScalarStyle.FOLDED),
-              yamlNodeFrom('single-quoted string',
+              wrapAsYamlNode('single-quoted string',
                   scalarStyle: ScalarStyle.SINGLE_QUOTED),
               // yamlNodeFrom('literal string', scalarStyle: ScalarStyle.LITERAL),
-              yamlNodeFrom('double-quoted string',
+              wrapAsYamlNode('double-quoted string',
                   scalarStyle: ScalarStyle.DOUBLE_QUOTED),
             ]));
 

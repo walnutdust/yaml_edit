@@ -2,15 +2,10 @@ import 'package:yaml_edit/yaml_edit.dart';
 import 'package:yaml/yaml.dart';
 
 void main() {
-  final doc = YamlEditor('- 0');
-  doc.assign(
-      [0],
-      yamlNodeFrom([
-        yamlNodeFrom('plain string', scalarStyle: ScalarStyle.PLAIN),
-        yamlNodeFrom('single-quoted string',
-            scalarStyle: ScalarStyle.SINGLE_QUOTED),
-        yamlNodeFrom('double-quoted string',
-            scalarStyle: ScalarStyle.DOUBLE_QUOTED),
-      ]));
+  final doc = YamlEditor('{no: "no"}');
+  print(doc);
+  doc.assign(['no'], 'a string');
+  print(doc);
+  doc.assign([false], '"boolean false"');
   print(doc);
 }

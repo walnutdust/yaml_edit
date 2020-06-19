@@ -2,6 +2,8 @@ import 'package:yaml/yaml.dart';
 
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
 /// `false` otherwise.
+///
+/// TODO (walnut): Ensure that all the possibilities are covered.
 bool isPossibleBoolean(String input) {
   final trimmedInput = input.trim();
 
@@ -20,6 +22,8 @@ bool isPossibleBoolean(String input) {
 
 /// Returns `true` if [input] could be interpreted as a null value by `package:yaml`,
 /// `false` otherwise.
+///
+/// TODO (walnut): Ensure that all the possibilities are covered.
 bool isPossibleNull(String input) {
   final trimmedInput = input.trim();
 
@@ -36,26 +40,38 @@ bool isPossibleNull(String input) {
 }
 
 /// Checks if [string] contains a YAML control character
+///
+/// TODO (walnut): Ensure that all the possibilities are covered.
 bool containsControlCharacter(String string) {
-  return (string.contains(':') ||
-      string.contains('!') ||
-      string.contains('&') ||
-      string.contains('*') ||
-      string.contains('-') ||
-      string.contains('[') ||
-      string.contains(']') ||
-      string.contains('#') ||
-      string.contains('|') ||
-      string.contains('>') ||
-      string.contains('@') ||
-      string.contains('`') ||
-      string.contains('"') ||
-      string.contains('{') ||
-      string.contains('}'));
+  final controlCharacters = [
+    '!',
+    '&',
+    '*',
+    '-',
+    '[',
+    ']',
+    '#',
+    '|',
+    '>',
+    '@',
+    '`',
+    '"',
+    '{',
+    '}',
+    ':'
+  ];
+
+  for (var controlChar in controlCharacters) {
+    if (string.contains(controlChar)) return true;
+  }
+
+  return false;
 }
 
 /// Returns a safe string by ensuring that if [value] was meant to be a string, it
 /// will not be interpreted otherwise.
+///
+/// TODO (walnut): Look into  \0, special characters, and unicode characters.
 String getSafeString(Object value) {
   if (value is YamlNode) {
     AssertionError(
@@ -327,4 +343,9 @@ int detectIndentation(String yaml) {
   }
 
   return 2;
+}
+
+/// Checks if [index] is [int], >=0, < [length]
+bool isValidIndex(Object index, int length) {
+  return index is int && index >= 0 && index < length;
 }

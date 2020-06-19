@@ -1,28 +1,41 @@
 import 'dart:collection' as collection;
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:source_span/source_span.dart';
 import 'package:yaml/yaml.dart';
 
 import 'equality.dart';
 
+// TODO: if value is a yamlnode, should we try applying the style too
 /// Wraps [value] into a [YamlNode].
-YamlNode yamlNodeFrom(Object value,
+///
+/// [Map]s, [List]s and Scalars will be wrapped as [YamlMap]s, [YamlList]s,
+/// and [YamlScalar]s respectively. If [collectionStyle]/[scalarStyle] is defined,
+/// and [value] is a collection or scalar, the wrapped [YamlNode] will have the
+/// respective style, otherwise it defaults to the ANY style.
+///
+///
+///
+///
+///
+///  with [collectionStyle] or [scalarStyle] applied.
+/// [value] or its children can be instances of [YamlNode], in which case no further
+/// wrapping will be done on them.
+YamlNode wrapAsYamlNode(Object value,
     {CollectionStyle collectionStyle = CollectionStyle.ANY,
     ScalarStyle scalarStyle = ScalarStyle.ANY}) {
   if (value is YamlNode) {
     return value;
   } else if (value is Map) {
+    ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
     return YamlMapWrap(value, collectionStyle: collectionStyle);
   } else if (value is List) {
+    ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
     return YamlListWrap(value, collectionStyle: collectionStyle);
   } else {
+    ArgumentError.checkNotNull(scalarStyle, 'scalarStyle');
     return YamlScalarWrap(value, style: scalarStyle);
   }
-}
-
-/// Checks if [index] is [int], >=0, < [length]
-bool isValidIndex(Object index, int length) {
-  return index is int && index >= 0 && index < length;
 }
 
 /// Internal class that allows us to define a constructor on [YamlScalar]
@@ -68,8 +81,8 @@ class YamlMapWrap
     var wrappedMap = deepEqualsMap<dynamic, YamlNode>();
 
     for (var entry in dartMap.entries) {
-      var wrappedKey = yamlNodeFrom(entry.key);
-      var wrappedValue = yamlNodeFrom(entry.value);
+      var wrappedKey = wrapAsYamlNode(entry.key);
+      var wrappedValue = wrapAsYamlNode(entry.value);
       wrappedMap[wrappedKey] = wrappedValue;
     }
     return YamlMapWrap._(wrappedMap, style: collectionStyle);
@@ -112,7 +125,7 @@ class YamlListWrap with collection.ListMixin implements YamlList {
       {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
     ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
 
-    final wrappedList = dartList.map((v) => yamlNodeFrom(v)).toList();
+    final wrappedList = dartList.map((v) => wrapAsYamlNode(v)).toList();
     return YamlListWrap._(wrappedList, style: collectionStyle);
   }
 

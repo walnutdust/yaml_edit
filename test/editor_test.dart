@@ -1,5 +1,4 @@
 import 'package:test/test.dart';
-import 'package:yaml_edit/src/wrap.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 import 'package:yaml/yaml.dart';
 

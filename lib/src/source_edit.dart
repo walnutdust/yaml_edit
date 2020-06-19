@@ -1,7 +1,19 @@
+import 'package:meta/meta.dart';
 import 'package:quiver_hashcode/hashcode.dart' show hash3;
 
-/// A class representing a change on a String, intended to be compatible with
+/// A class representing a change on a [String], intended to be compatible with
 /// `package:analysis_server`'s [SourceEdit].
+///
+/// For example, changing a string from
+/// ```
+/// foo: foobar
+/// ```
+/// to
+/// ```
+/// foo: barbar
+/// ```
+/// will be represented by a `SourceEdit(offset: 4, length: 3, replacement: 'bar')`
+@sealed
 class SourceEdit {
   /// The offset from the start of the string where the modification begins.
   final int offset;
@@ -12,7 +24,18 @@ class SourceEdit {
   /// The replacement string to be used.
   final String replacement;
 
-  SourceEdit(this.offset, this.length, this.replacement);
+  factory SourceEdit(int offset, int length, String replacement) =>
+      SourceEdit._(offset, length, replacement);
+
+  /// Creates a new [SourceEdit] instance. [offset], [length] and [replacement] must be
+  /// non-null, and [offset] and [length] must be non-negative.
+  SourceEdit._(this.offset, this.length, this.replacement) {
+    ArgumentError.checkNotNull(offset, 'offset');
+    ArgumentError.checkNotNull(length, 'length');
+    ArgumentError.checkNotNull(replacement, 'replacement');
+    RangeError.checkNotNegative(offset);
+    RangeError.checkNotNegative(length);
+  }
 
   @override
   bool operator ==(Object other) {
@@ -73,16 +96,16 @@ class SourceEdit {
   /// [edits] should be in order i.e. the first [SourceEdit] in [edits] should be the first
   /// edit applied to [original].
   static String applyAll(String original, Iterable<SourceEdit> edits) {
-    var current = original;
-    for (var edit in edits) {
-      current = edit.apply(current);
-    }
+    ArgumentError.checkNotNull(original, 'original');
+    ArgumentError.checkNotNull(edits, 'edits');
 
-    return current;
+    return edits.fold(original, (current, edit) => edit.apply(current));
   }
 
   /// Applies one [SourceEdit]s to an original string, and return the final output.
   String apply(String original) {
+    ArgumentError.checkNotNull(original, 'original');
+
     return original.replaceRange(offset, offset + length, replacement);
   }
 }

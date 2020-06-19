@@ -73,7 +73,7 @@ SourceEdit removeInList(String yaml, YamlList list, int index) {
 YamlList updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
   final newNodes = [...list.nodes];
   update(newNodes);
-  return yamlNodeFrom(newNodes);
+  return wrapAsYamlNode(newNodes);
 }
 
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the

@@ -53,7 +53,7 @@ YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
     updatedMap[key.value] = dummyMap[key].value;
   }
 
-  return yamlNodeFrom(updatedMap);
+  return wrapAsYamlNode(updatedMap);
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of adding

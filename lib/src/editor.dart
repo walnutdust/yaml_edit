@@ -13,9 +13,14 @@ import 'wrap.dart';
 /// An interface for modififying [YAML][1] documents while preserving comments and
 /// whitespaces.
 ///
+/// YAML parsing is supported by `package:yaml`, and modifications are performed as
+/// string operations. Each time a modification takes place via one of the public
+/// methods, we calculate the expected final result, and parse the result YAML string,
+/// and ensure the two YAML trees match, throwing an [AssertionError] otherwise. Such a situation
+/// should be extremely rare, and should only occur with degenerate formatting.
+///
 /// Most modification methods require the user to pass in an Iterable<Object> path that
-/// holds the keys/indices to navigate to the element. Key equality is performed via
-/// `package:yaml`'s [YamlMap]'s key equality.
+/// holds the keys/indices to navigate to the element.
 ///
 /// For example,
 ///
@@ -29,7 +34,7 @@ import 'wrap.dart';
 /// ```
 ///
 /// To get to `7`, our path will be `['c', 2, 'f', 1]`. The path for the base object is the
-/// empty array `[]`. All modification methods will return a [ArgumentError] if the path
+/// empty array `[]`. All modification methods will throw an [Error] if the path
 /// provided is invalid. Note also that that the order of elements in the path is important,
 /// and it should be arranged in order of calling, with the first element being the first
 /// key or index to be called.
@@ -38,79 +43,11 @@ import 'wrap.dart';
 ///
 /// [1]: https://yaml.org/
 @sealed
-abstract class YamlEditor {
-  /// Returns a list of [SourceEdit]s describing the modifications performed on the
-  /// YAML string thus far.
-  UnmodifiableListView<SourceEdit> get edits;
-
-  factory YamlEditor(String yaml) => YamlStringEditor(yaml);
-
-  /// Parses the document to return [YamlNode] currently present at [path]. If no [YamlNode]s exist
-  /// at [path], [parseAt] will return a [YamlNode]-wrapped [orElse] if it is defined, or throw an
-  /// [ArgumentError] otherwise.
-  ///
-  /// Note that this behavior deviates slightly from standard [Map] behavior, which returns `null`
-  /// instead if the key is not present.
-  YamlNode parseAt(Iterable<Object> path, {Object orElse});
-
-  /// Sets [value] in the [path].
-  ///
-  /// Note that [assign] provides a different result as compared to a [remove] followed by an
-  /// [insertIntoList], because it preserves comments at the same level.
-  ///
-  /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
-  /// [RangeError] if an index is negative or longer than list length).
-  void assign(Iterable<Object> path, Object value);
-
-  /// Appends [value] into the list at [listPath].
-  ///
-  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
-  /// [ArgumentError] will be thrown.
-  void appendToList(Iterable<Object> listPath, Object value);
-
-  /// Prepends [value] into the list at [listPath].
-  ///
-  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
-  /// [ArgumentError] will be thrown.
-  void prependToList(Iterable<Object> listPath, Object value);
-
-  /// Inserts [value] into the list at [listPath], only if the element at the given path
-  /// is a list.
-  ///
-  /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
-  /// be thrown.
-  void insertIntoList(Iterable<Object> listPath, int index, Object value);
-
-  /// Changes the contents of the list at [listPath] by removing [deleteCount] items at [index], and
-  /// inserts [values] in-place.
-  ///
-  /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList], if the path is invalid, or if [index] + [deleteCount]
-  /// is greater than the list length, an [ArgumentError] will be thrown.
-  Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
-      int deleteCount, Iterable<Object> values);
-
-  /// Removes the node at [path].
-  ///
-  /// Throws [ArgumentError] if [path] is invalid.
-  YamlNode remove(Iterable<Object> path);
-}
-
-/// A concrete implementation of [YamlEditor] that uses string manipulation to effect the underlying
-/// YAML in order to achieve the desired changes.
-///
-/// YAML parsing is supported by `package:yaml`, and modifications are performed as
-/// string operations. Each time a modification takes place via one of the public
-/// methods, we calculate the expected final result, and parse the result YAML string,
-/// and ensure the two YAML trees match, throwing an [AssertionError] otherwise. Such a situation
-/// should be extremely rare, and should only occur with degenerate formatting.
-class YamlStringEditor implements YamlEditor {
+class YamlEditor {
   /// List of [SourceEdit]s that have been applied to [_yaml] since the creation of this
   /// instance, in chronological order. Intended to be compatible with `package:analysis_server`.
   final List<SourceEdit> _edits = [];
 
-  @override
   UnmodifiableListView<SourceEdit> get edits =>
       UnmodifiableListView<SourceEdit>([..._edits]);
 
@@ -123,16 +60,22 @@ class YamlStringEditor implements YamlEditor {
   @override
   String toString() => _yaml;
 
-  YamlStringEditor(this._yaml) {
+  factory YamlEditor(String yaml) => YamlEditor._(yaml);
+
+  YamlEditor._(this._yaml) {
     _contents = loadYamlNode(_yaml);
   }
 
   /// Parses the document to return [YamlNode] currently present at [path]. If no [YamlNode]s exist
   /// at [path], [parseAt] will return a [YamlNode]-wrapped [orElse] if it is defined, or throw an
-  /// [ArgumentError] otherwise.
+  /// [Error] otherwise.
   ///
-  /// Note that this behavior deviates slightly from standard [Map] behavior, which returns `null`
-  /// instead if the key is not present.
+  /// To get `null` when [path] does not point to a value in the [YamlNode]-tree, simply pass `orElse: null`.
+  /// ```dart
+  /// final myYamlEditor('{"key": "value"}');
+  /// final value = myYamlEditor.valueAt(['invalid', 'path'], orElse: null);
+  /// print(value) // null
+  /// ```
   ///
   /// Common usage example:
   /// ```dart
@@ -176,16 +119,9 @@ class YamlStringEditor implements YamlEditor {
   /// doc2.parseAt([2]); // ArgumentError
   /// doc2.parseAt(["2"]); // ArgumentError
   /// ```
-  ///
-  /// [orElse] can also be used to determine if a path exists.
-  /// ```dart
-  /// doc.parseAt(my_path, orElse: #doesNotExist);
-  ///
-  /// // Or, if you know that your collection will not contain null,
-  /// doc.parseAt(my_path, orElse: null);
-  /// ```
-  @override
   YamlNode parseAt(Iterable<Object> path, {Object orElse = #noArg}) {
+    ArgumentError.checkNotNull(path, 'path');
+
     try {
       return _traverse(path);
     } on ArgumentError {
@@ -196,7 +132,7 @@ class YamlStringEditor implements YamlEditor {
           return orElse;
         }
 
-        return yamlNodeFrom(orElse);
+        return wrapAsYamlNode(orElse);
       }
     }
   }
@@ -206,8 +142,7 @@ class YamlStringEditor implements YamlEditor {
   /// Note that [assign] provides a different result as compared to a [remove] followed by an
   /// [insertIntoList], because it preserves comments at the same level.
   ///
-  /// Throws an [ArgumentError] if path is invalid, and throws the usual Dart errors otherwise (e.g.
-  /// [RangeError] if and index is negative or longer than list length).
+  /// Throws if [path] is invalid.
   ///
   /// ```dart
   /// final doc = YamlEditor('''
@@ -241,13 +176,14 @@ class YamlStringEditor implements YamlEditor {
   ///   - test
   ///   - 2
   /// ```
-  @override
   void assign(Iterable<Object> path, Object value) {
+    ArgumentError.checkNotNull(path, 'path');
+
     if (path.isEmpty) {
       final end = getContentSensitiveEnd(_contents);
       final edit = SourceEdit(0, end, getFlowString(value));
 
-      _performEdit(edit, path, yamlNodeFrom(value));
+      _performEdit(edit, path, wrapAsYamlNode(value));
       return;
     }
 
@@ -255,79 +191,92 @@ class YamlStringEditor implements YamlEditor {
     final keyOrIndex = path.last;
     final parentNode = parseAt(collectionPath);
 
-    var edit;
-    var expectedNode;
-
-    final valueNode = yamlNodeFrom(value);
+    final valueNode = wrapAsYamlNode(value);
 
     if (parentNode is YamlList) {
-      edit = assignInList(_yaml, parentNode, keyOrIndex, value);
-      expectedNode =
-          updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
-    } else if (parentNode is YamlMap) {
-      edit = assignInMap(_yaml, parentNode, keyOrIndex, value);
-      final keyNode = yamlNodeFrom(keyOrIndex);
-      expectedNode =
-          updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode);
-    } else {
-      throw ArgumentError('Scalar $parentNode does not have key $keyOrIndex');
+      _performEdit(
+          assignInList(_yaml, parentNode, keyOrIndex, value),
+          collectionPath,
+          updatedYamlList(
+              parentNode, (nodes) => nodes[keyOrIndex] = valueNode));
+      return;
     }
 
-    _performEdit(edit, collectionPath, expectedNode);
+    if (parentNode is YamlMap) {
+      final keyNode = wrapAsYamlNode(keyOrIndex);
+
+      _performEdit(
+          assignInMap(_yaml, parentNode, keyOrIndex, value),
+          collectionPath,
+          updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode));
+      return;
+    }
+
+    throw ArgumentError('Scalar $parentNode does not have key $keyOrIndex');
   }
 
-  /// Appends [value] into the list at [listPath].
+  /// Appends [value] into the list at [path].
+  ///
+  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
+  void appendToList(Iterable<Object> path, Object value) {
+    ArgumentError.checkNotNull(path, 'path');
+    final yamlList = _traverseToList(path);
+
+    insertIntoList(path, yamlList.length, value);
+  }
+
+  /// Prepends [value] into the list at [path].
   ///
   /// If the element at the given path is not a [YamlList] or if the path is invalid, an
   /// [ArgumentError] will be thrown.
-  @override
-  void appendToList(Iterable<Object> listPath, Object value) {
-    var yamlList = _traverseToList(listPath);
+  void prependToList(Iterable<Object> path, Object value) {
+    ArgumentError.checkNotNull(path, 'path');
 
-    insertIntoList(listPath, yamlList.length, value);
+    insertIntoList(path, 0, value);
   }
 
-  /// Prepends [value] into the list at [listPath].
-  ///
-  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
-  /// [ArgumentError] will be thrown.
-  @override
-  void prependToList(Iterable<Object> listPath, Object value) =>
-      insertIntoList(listPath, 0, value);
-
-  /// Inserts [value] into the list at [listPath], only if the element at the given path
+  /// Inserts [value] into the list at [path], only if the element at the given path
   /// is a list.
   ///
-  /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList] or if the path is invalid, an [ArgumentError] will
-  /// be thrown.
-  @override
-  void insertIntoList(Iterable<Object> listPath, int index, Object value) {
-    var list = _traverseToList(listPath);
+  /// [index] must be non-negative and no greater than the list's length.
+  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
+  void insertIntoList(Iterable<Object> path, int index, Object value) {
+    ArgumentError.checkNotNull(path, 'path');
+    RangeError.checkNotNegative(index, 'index');
+
+    final list = _traverseToList(path);
+    RangeError.checkValueInInterval(index, 0, list.length);
+
     final edit = insertInList(_yaml, list, index, value);
 
     final expectedList = updatedYamlList(
-        list, (nodes) => nodes.insert(index, yamlNodeFrom(value)));
+        list, (nodes) => nodes.insert(index, wrapAsYamlNode(value)));
 
-    _performEdit(edit, listPath, expectedList);
+    _performEdit(edit, path, expectedList);
   }
 
-  /// Changes the contents of the list at [listPath] by removing [deleteCount] items at [index], and
+  /// Changes the contents of the list at [path] by removing [deleteCount] items at [index], and
   /// inserts [values] in-place.
   ///
-  /// [index] must be non-negative and no greater than the list's length. If the element at
-  /// the given path is not a [YamlList], if the path is invalid, or if [index] + [deleteCount]
-  /// is greater than the list length, an [ArgumentError] will be thrown.
+  /// [index] and [deleteCount] must be non-negative and, [index] + [deleteCount] must be no
+  /// greater than the list's length. Throws otherwise or if [path] is invalid.
   ///
   /// ```dart
   /// final doc = YamlEditor('[Jan, March, April, June]');
   /// doc.spliceList([], 1, 0, ['Feb']); // [Jan, Feb, March, April, June]
   /// doc.spliceList([], 4, 1, ['May']); // [Jan, Feb, March, April, May]
   /// ```
-  @override
-  Iterable<YamlNode> spliceList(Iterable<Object> listPath, int index,
+  Iterable<YamlNode> spliceList(Iterable<Object> path, int index,
       int deleteCount, Iterable<Object> values) {
-    var list = _traverseToList(listPath);
+    ArgumentError.checkNotNull(path, 'path');
+    ArgumentError.checkNotNull(index, 'index');
+    ArgumentError.checkNotNull(deleteCount, 'deleteCount');
+    ArgumentError.checkNotNull(values, 'values');
+
+    final list = _traverseToList(path);
+
+    RangeError.checkValueInInterval(index, 0, list.length);
+    RangeError.checkValueInInterval(index + deleteCount, 0, list.length);
 
     final nodesToRemove = list.nodes.getRange(index, index + deleteCount);
 
@@ -338,11 +287,11 @@ class YamlStringEditor implements YamlEditor {
     /// Reverse [values] and insert them.
     final reversedValues = values.toList().reversed;
     for (var value in reversedValues) {
-      insertIntoList(listPath, index, value);
+      insertIntoList(path, index, value);
     }
 
     for (var i = 0; i < deleteCount; i++) {
-      remove([...listPath, index + values.length]);
+      remove([...path, index + values.length]);
     }
 
     return nodesToRemove;
@@ -350,9 +299,10 @@ class YamlStringEditor implements YamlEditor {
 
   /// Removes the node at [path].
   ///
-  /// Throws [ArgumentError] if [path] is invalid.
-  @override
+  /// Throws if [path] is invalid.
   YamlNode remove(Iterable<Object> path) {
+    ArgumentError.checkNotNull(path, 'path');
+
     var edit;
     var expectedNode;
     var nodeToRemove = parseAt(path);
@@ -362,24 +312,25 @@ class YamlStringEditor implements YamlEditor {
       edit = SourceEdit(0, _yaml.length, '');
 
       _performEdit(edit, path, expectedNode);
-    } else {
-      final collectionPath = path.take(path.length - 1);
-      final keyOrIndex = path.last;
-      final parentNode = parseAt(collectionPath);
-
-      if (parentNode is YamlList) {
-        edit = removeInList(_yaml, parentNode, keyOrIndex);
-        expectedNode =
-            updatedYamlList(parentNode, (nodes) => nodes.removeAt(keyOrIndex));
-      } else if (parentNode is YamlMap) {
-        edit = removeInMap(_yaml, parentNode, keyOrIndex);
-
-        expectedNode =
-            updatedYamlMap(parentNode, (nodes) => nodes.remove(keyOrIndex));
-      }
-
-      _performEdit(edit, collectionPath, expectedNode);
+      return nodeToRemove;
     }
+
+    final collectionPath = path.take(path.length - 1);
+    final keyOrIndex = path.last;
+    final parentNode = parseAt(collectionPath);
+
+    if (parentNode is YamlList) {
+      edit = removeInList(_yaml, parentNode, keyOrIndex);
+      expectedNode =
+          updatedYamlList(parentNode, (nodes) => nodes.removeAt(keyOrIndex));
+    } else if (parentNode is YamlMap) {
+      edit = removeInMap(_yaml, parentNode, keyOrIndex);
+
+      expectedNode =
+          updatedYamlMap(parentNode, (nodes) => nodes.remove(keyOrIndex));
+    }
+
+    _performEdit(edit, collectionPath, expectedNode);
 
     return nodeToRemove;
   }
@@ -387,6 +338,8 @@ class YamlStringEditor implements YamlEditor {
   /// Traverses down [path] to return the [YamlNode] at [path] if successful, throwing an
   /// [ArgumentError] otherwise.
   YamlNode _traverse(Iterable<Object> path) {
+    ArgumentError.checkNotNull(path, 'path');
+
     if (path.isEmpty) {
       return _contents;
     }
@@ -425,6 +378,8 @@ class YamlStringEditor implements YamlEditor {
   ///
   /// Convenience function to ensure that a [YamlList] is returned.
   YamlList _traverseToList(Iterable<Object> path) {
+    ArgumentError.checkNotNull(path, 'path');
+
     final possibleList = parseAt(path);
 
     if (possibleList is YamlList) {
@@ -442,6 +397,9 @@ class YamlStringEditor implements YamlEditor {
   /// [AssertionError] if the two trees do not match.
   void _performEdit(
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
+    ArgumentError.checkNotNull(edit, 'edit');
+    ArgumentError.checkNotNull(path, 'path');
+
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
     final actualTree = loadYamlNode(_yaml);
@@ -471,6 +429,9 @@ $expectedTree''');
   /// [SourceSpan]s in this new tree are not guaranteed to be accurate.
   YamlNode _deepModify(
       YamlNode tree, Iterable<Object> path, YamlNode expectedNode) {
+    ArgumentError.checkNotNull(path, 'path');
+    ArgumentError.checkNotNull(tree, 'tree');
+
     if (path.isEmpty) return expectedNode;
 
     final nextPath = path.skip(1);
@@ -487,7 +448,7 @@ $expectedTree''');
           (nodes) =>
               nodes[index] = _deepModify(nodes[index], nextPath, expectedNode));
     } else if (tree is YamlMap) {
-      final keyNode = yamlNodeFrom(path.first);
+      final keyNode = wrapAsYamlNode(path.first);
       return updatedYamlMap(
           tree,
           (nodes) => nodes[keyNode] =

@@ -23,4 +23,4 @@ library yaml_edit;
 
 export 'src/source_edit.dart';
 export 'src/editor.dart';
-export 'src/wrap.dart';
+export 'src/wrap.dart' show wrapAsYamlNode;
