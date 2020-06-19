@@ -58,32 +58,32 @@ recipe:
   });
 
   group('parseAt', () {
-    test('throws ArgumentError if key does not exist', () {
+    test('throws PathError if key does not exist', () {
       final doc = YamlEditor('{a: 4}');
       final path = ['b'];
 
-      expect(() => doc.parseAt(path), throwsArgumentError);
+      expect(() => doc.parseAt(path), throwsPathError);
     });
 
-    test('throws ArgumentError if path tries to go deeper into a scalar', () {
+    test('throws PathError if path tries to go deeper into a scalar', () {
       final doc = YamlEditor('{a: 4}');
       final path = ['a', 'b'];
 
-      expect(() => doc.parseAt(path), throwsArgumentError);
+      expect(() => doc.parseAt(path), throwsPathError);
     });
 
-    test('throws ArgumentError if index is out of bounds', () {
+    test('throws PathError if index is out of bounds', () {
       final doc = YamlEditor('[0,1]');
       final path = [2];
 
-      expect(() => doc.parseAt(path), throwsArgumentError);
+      expect(() => doc.parseAt(path), throwsPathError);
     });
 
-    test('throws ArgumentError if index is not an integer', () {
+    test('throws PathError if index is not an integer', () {
       final doc = YamlEditor('[0,1]');
       final path = ['2'];
 
-      expect(() => doc.parseAt(path), throwsArgumentError);
+      expect(() => doc.parseAt(path), throwsPathError);
     });
 
     group('returns a YamlNode', () {
@@ -220,20 +220,19 @@ c: 3
       expectYamlBuilderValue(doc, 'replacement');
     });
 
-    test('throw RangeError in list if index is negative', () {
+    test('throws RangeError in list if index is negative', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
       expect(() => doc.assign([-1], 'hi'), throwsRangeError);
     });
 
-    test('throw RangeError in list if index is larger than list length', () {
+    test('throws RangeError in list if index is larger than list length', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
       expect(() => doc.assign([2], 'hi'), throwsRangeError);
     });
 
-    test('throw ArgumentError in list if attempting to set a key of a scalar',
-        () {
+    test('throws PathError in list if attempting to set a key of a scalar', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.assign([0, 'a'], 'a'), throwsArgumentError);
+      expect(() => doc.assign([0, 'a'], 'a'), throwsPathError);
     });
 
     test('simple block map', () {
@@ -794,32 +793,32 @@ c: 3
   });
 
   group('remove', () {
-    test('throws ArgumentError if collectionPath points to a scalar', () {
+    test('throws PathError if collectionPath points to a scalar', () {
       final doc = YamlEditor('''
 a: 1
 b: 2
 c: 3
 ''');
 
-      expect(() => doc.remove(['a', 0]), throwsArgumentError);
+      expect(() => doc.remove(['a', 0]), throwsPathError);
     });
 
-    test('throws ArgumentError if collectionPath is invalid', () {
+    test('throws PathError if collectionPath is invalid', () {
       final doc = YamlEditor('''
 a: 1
 b: 2
 c: 3
 ''');
 
-      expect(() => doc.remove(['d']), throwsArgumentError);
+      expect(() => doc.remove(['d']), throwsPathError);
     });
 
-    test('throws ArgumentError if collectionPath is invalid - list', () {
+    test('throws PathError if collectionPath is invalid - list', () {
       final doc = YamlEditor('''
 [1, 2, 3]
 ''');
 
-      expect(() => doc.remove([4]), throwsArgumentError);
+      expect(() => doc.remove([4]), throwsPathError);
     });
 
     test('empty path should clear string', () {
@@ -1032,14 +1031,14 @@ c: 3
   });
 
   group('appendToList', () {
-    test('throws ArgumentError if it is a map', () {
+    test('throws PathError if it is a map', () {
       final doc = YamlEditor('a:1');
-      expect(() => doc.appendToList([], 4), throwsArgumentError);
+      expect(() => doc.appendToList([], 4), throwsPathError);
     });
 
-    test('throws ArgumentError if it is a scalar', () {
+    test('throws PathError if it is a scalar', () {
       final doc = YamlEditor('1');
-      expect(() => doc.appendToList([], 4), throwsArgumentError);
+      expect(() => doc.appendToList([], 4), throwsPathError);
     });
 
     test('simple block list ', () {
@@ -1149,14 +1148,14 @@ c: 3
   });
 
   group('prependToList', () {
-    test('throws ArgumentError if it is a map', () {
+    test('throws PathError if it is a map', () {
       final doc = YamlEditor('a:1');
-      expect(() => doc.prependToList([], 4), throwsArgumentError);
+      expect(() => doc.prependToList([], 4), throwsPathError);
     });
 
-    test('throws ArgumentError if it is a scalar', () {
+    test('throws PathError if it is a scalar', () {
       final doc = YamlEditor('1');
-      expect(() => doc.prependToList([], 4), throwsArgumentError);
+      expect(() => doc.prependToList([], 4), throwsPathError);
     });
 
     test('simple flow list', () {
@@ -1284,14 +1283,14 @@ a: # comments
   });
 
   group('insertIntoList', () {
-    test('throws ArgumentError if it is a map', () {
+    test('throws PathError if it is a map', () {
       final doc = YamlEditor('a:1');
-      expect(() => doc.insertIntoList([], 0, 4), throwsArgumentError);
+      expect(() => doc.insertIntoList([], 0, 4), throwsPathError);
     });
 
-    test('throws ArgumentError if it is a scalar', () {
+    test('throws PathError if it is a scalar', () {
       final doc = YamlEditor('1');
-      expect(() => doc.insertIntoList([], 0, 4), throwsArgumentError);
+      expect(() => doc.insertIntoList([], 0, 4), throwsPathError);
     });
 
     test('simple flow list', () {
@@ -1391,10 +1390,10 @@ a: # comments
 
   group('spliceList', () {
     test(
-        'throws ArgumentError if invalid index + deleteCount combination is passed in',
+        'throws RangeError if invalid index + deleteCount combination is passed in',
         () {
       final doc = YamlEditor('[0, 0]');
-      expect(() => doc.spliceList([], 1, 5, [1, 2]), throwsArgumentError);
+      expect(() => doc.spliceList([], 1, 5, [1, 2]), throwsRangeError);
     });
 
     test('simple block list', () {

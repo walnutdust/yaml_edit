@@ -2,6 +2,7 @@ import 'dart:collection' show UnmodifiableListView;
 
 import 'package:meta/meta.dart';
 import 'package:yaml/yaml.dart';
+import 'package:yaml_edit/src/path_error.dart';
 
 import 'equality.dart';
 import 'list_mutations.dart';
@@ -105,26 +106,12 @@ class YamlEditor {
   /// print(newNode.value); // "YAML"
   /// print(node.value); // "YAML Ain't Markup Language"
   /// ```
-  ///
-  /// Ensuring that you get the value you want:
-  /// ```dart
-  /// final doc = YamlEditor('{a: {d: 4}, c: ~}');
-  /// doc.parseAt(['b', 'd']); // ArgumentError
-  /// doc.parseAt(['b']); // ArgumentError
-  /// doc.parseAt(['b'], orElse: null); // YamlScalar(null)
-  /// doc.parseAt(['b'], orElse: {"a": 42}); // YamlMap({"a": 42})
-  /// doc.parseAt(['b'], orElse: 42); // YamlScalar(42)
-  ///
-  /// final doc2 = YamlEditor('[0,1]');
-  /// doc2.parseAt([2]); // ArgumentError
-  /// doc2.parseAt(["2"]); // ArgumentError
-  /// ```
   YamlNode parseAt(Iterable<Object> path, {Object orElse = #noArg}) {
     ArgumentError.checkNotNull(path, 'path');
 
     try {
       return _traverse(path);
-    } on ArgumentError {
+    } on PathError {
       if (orElse == #noArg) {
         rethrow;
       } else {
@@ -212,7 +199,8 @@ class YamlEditor {
       return;
     }
 
-    throw ArgumentError('Scalar $parentNode does not have key $keyOrIndex');
+    throw PathError.unexpected(
+        path, 'Scalar $parentNode does not have key $keyOrIndex');
   }
 
   /// Appends [value] into the list at [path].
@@ -227,8 +215,7 @@ class YamlEditor {
 
   /// Prepends [value] into the list at [path].
   ///
-  /// If the element at the given path is not a [YamlList] or if the path is invalid, an
-  /// [ArgumentError] will be thrown.
+  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
   void prependToList(Iterable<Object> path, Object value) {
     ArgumentError.checkNotNull(path, 'path');
 
@@ -239,6 +226,7 @@ class YamlEditor {
   /// is a list.
   ///
   /// [index] must be non-negative and no greater than the list's length.
+  ///
   /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
   void insertIntoList(Iterable<Object> path, int index, Object value) {
     ArgumentError.checkNotNull(path, 'path');
@@ -336,7 +324,7 @@ class YamlEditor {
   }
 
   /// Traverses down [path] to return the [YamlNode] at [path] if successful, throwing an
-  /// [ArgumentError] otherwise.
+  /// error otherwise.
   YamlNode _traverse(Iterable<Object> path) {
     ArgumentError.checkNotNull(path, 'path');
 
@@ -352,8 +340,7 @@ class YamlEditor {
         if (isValidIndex(keyOrIndex, list.length)) {
           currentNode = list.nodes[keyOrIndex];
         } else {
-          throw ArgumentError(
-              'List $list does not take index $keyOrIndex from path $path');
+          throw PathError(path, keyOrIndex, list);
         }
       } else if (currentNode is YamlMap) {
         final map = currentNode as YamlMap;
@@ -361,22 +348,21 @@ class YamlEditor {
         if (containsKey(map, keyOrIndex)) {
           currentNode = map.nodes[keyOrIndex];
         } else {
-          throw ArgumentError(
-              'Map $map does not have key $keyOrIndex from path $path');
+          throw PathError(path, keyOrIndex, map);
         }
       } else {
-        throw ArgumentError(
-            'Unable to traverse to $keyOrIndex in path $path from scalar $currentNode');
+        throw PathError(path, keyOrIndex, currentNode);
       }
     }
 
     return currentNode;
   }
 
-  /// Traverses down the provided [path] to return the [YamlList] at [path] if successful,
-  /// throwing an [ArgumentError] otherwise.
+  /// Traverses down the provided [path] to return the [YamlList] at [path].
   ///
   /// Convenience function to ensure that a [YamlList] is returned.
+  ///
+  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
   YamlList _traverseToList(Iterable<Object> path) {
     ArgumentError.checkNotNull(path, 'path');
 
@@ -385,7 +371,8 @@ class YamlEditor {
     if (possibleList is YamlList) {
       return possibleList;
     } else {
-      throw ArgumentError('Path $path does not point to a YamlList!');
+      throw PathError.unexpected(
+          path, 'Path $path does not point to a YamlList!');
     }
   }
 
@@ -420,7 +407,7 @@ $expectedTree''');
   /// Utility method to produce an updated YAML tree equivalent to converting the [YamlNode]
   /// at [path] to be [expectedNode].
   ///
-  /// Throws an [ArgumentError] if path is invalid.
+  /// Throws if path is invalid.
   ///
   /// When called, it creates a new [YamlNode] of the same type as [tree], and copies its children
   /// over, except for the child that is on the path. Doing so allows us to "update" the immutable
@@ -440,7 +427,7 @@ $expectedTree''');
       final index = path.first;
 
       if (!isValidIndex(index, tree.length)) {
-        throw ArgumentError('List $tree does not take index $index');
+        throw PathError(path, index, tree);
       }
 
       return updatedYamlList(
@@ -454,7 +441,7 @@ $expectedTree''');
           (nodes) => nodes[keyNode] =
               _deepModify(nodes[keyNode], nextPath, expectedNode));
     } else {
-      throw ArgumentError('Unable to perform _deepModify on scalar $tree');
+      throw PathError(path, path.first, tree);
     }
   }
 }

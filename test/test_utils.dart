@@ -1,5 +1,6 @@
 import 'package:test/test.dart';
 import 'package:yaml_edit/src/equality.dart';
+import 'package:yaml_edit/src/path_error.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
 /// Asserts that a string containing a single YAML document is unchanged
@@ -22,3 +23,6 @@ void expectDeepEquals(Object actual, Object expected) {
 }
 
 Matcher notEquals(dynamic expected) => isNot(equals(expected));
+
+/// A matcher for functions that throw PathError.
+Matcher throwsPathError = throwsA(isA<PathError>());
