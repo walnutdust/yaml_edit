@@ -4,7 +4,7 @@ import 'package:yaml/yaml.dart';
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
 /// `false` otherwise.
 ///
-/// TODO (walnut): Ensure that all the possibilities are covered.
+/// See https://yaml.org/spec/1.2/spec.html#id2805019.
 bool isPossibleBoolean(String input) {
   final trimmedInput = input.trim();
 
@@ -24,7 +24,7 @@ bool isPossibleBoolean(String input) {
 /// Returns `true` if [input] could be interpreted as a null value by `package:yaml`,
 /// `false` otherwise.
 ///
-/// TODO (walnut): Ensure that all the possibilities are covered.
+/// See https://yaml.org/spec/1.2/spec.html#id2805019.
 bool isPossibleNull(String input) {
   final trimmedInput = input.trim();
 
@@ -69,6 +69,11 @@ bool containsControlCharacter(String string) {
   return false;
 }
 
+/// Checks if [input] has leading or trailing whitespaces.
+bool paddedByWhiteSpace(String input) {
+  return input.trim().length - input.length != 0;
+}
+
 /// Returns a safe string by ensuring that if [value] was meant to be a string, it
 /// will not be interpreted otherwise.
 ///
@@ -84,16 +89,17 @@ String getSafeString(Object value) {
   }
 
   if (value is String) {
-    var result = value.trim();
+    var result = value;
 
     /// If it contains a dangerous character we want to wrap the result with single
     /// quotes
-    if (containsControlCharacter(result) ||
-        isPossibleBoolean(result) ||
-        isPossibleNull(result)) {
+    if (containsControlCharacter(value) ||
+        isPossibleBoolean(value) ||
+        isPossibleNull(value) ||
+        paddedByWhiteSpace(value)) {
       /// But we need to escape the characters if they contain a single quote.
-      if (result.contains('\'')) {
-        result = result.replaceAll('\'', '\'\'');
+      if (value.contains('\'')) {
+        result = value.replaceAll('\'', '\'\'');
       }
 
       return '\'$result\'';
