@@ -174,8 +174,9 @@ class YamlEditor {
       return;
     }
 
-    final collectionPath = path.take(path.length - 1);
-    final keyOrIndex = path.last;
+    final pathAsList = path.toList();
+    final collectionPath = pathAsList.take(path.length - 1);
+    final keyOrIndex = pathAsList.last;
     final parentNode = parseAt(collectionPath);
 
     final valueNode = wrapAsYamlNode(value);
@@ -303,8 +304,9 @@ class YamlEditor {
       return nodeToRemove;
     }
 
-    final collectionPath = path.take(path.length - 1);
-    final keyOrIndex = path.last;
+    final pathAsList = path.toList();
+    final collectionPath = pathAsList.take(path.length - 1);
+    final keyOrIndex = pathAsList.last;
     final parentNode = parseAt(collectionPath);
 
     if (parentNode is YamlList) {
@@ -337,19 +339,19 @@ class YamlEditor {
     for (var keyOrIndex in path) {
       if (currentNode is YamlList) {
         final list = currentNode as YamlList;
-        if (isValidIndex(keyOrIndex, list.length)) {
-          currentNode = list.nodes[keyOrIndex];
-        } else {
+        if (!isValidIndex(keyOrIndex, list.length)) {
           throw PathError(path, keyOrIndex, list);
         }
+
+        currentNode = list.nodes[keyOrIndex];
       } else if (currentNode is YamlMap) {
         final map = currentNode as YamlMap;
 
-        if (containsKey(map, keyOrIndex)) {
-          currentNode = map.nodes[keyOrIndex];
-        } else {
+        if (!containsKey(map, keyOrIndex)) {
           throw PathError(path, keyOrIndex, map);
         }
+
+        currentNode = map.nodes[keyOrIndex];
       } else {
         throw PathError(path, keyOrIndex, currentNode);
       }

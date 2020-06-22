@@ -1,3 +1,4 @@
+import 'package:source_span/source_span.dart';
 import 'package:yaml/yaml.dart';
 
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
@@ -348,4 +349,14 @@ int detectIndentation(String yaml) {
 /// Checks if [index] is [int], >=0, < [length]
 bool isValidIndex(Object index, int length) {
   return index is int && index >= 0 && index < length;
+}
+
+/// Creates a [SourceSpan] from [sourceUrl] with no meaningful location
+/// information.
+///
+/// Mainly used with [wrapAsYamlNode] to allow for a reasonable
+/// implementation of [SourceSpan.message].
+SourceSpan shellSpan(Object sourceUrl) {
+  var shellSourceLocation = SourceLocation(0, sourceUrl: sourceUrl);
+  return SourceSpanBase(shellSourceLocation, shellSourceLocation, '');
 }

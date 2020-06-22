@@ -1,10 +1,10 @@
 import 'dart:collection' as collection;
 import 'package:collection/collection.dart';
-import 'package:meta/meta.dart';
 import 'package:source_span/source_span.dart';
 import 'package:yaml/yaml.dart';
 
 import 'equality.dart';
+import 'utils.dart';
 
 // TODO: if value is a yamlnode, should we try applying the style too
 /// Wraps [value] into a [YamlNode].
@@ -46,12 +46,13 @@ class YamlScalarWrap implements YamlScalar {
   final ScalarStyle style;
 
   @override
-  final SourceSpan span = null;
+  final SourceSpan span;
 
   @override
   final dynamic value;
 
-  YamlScalarWrap(this.value, {this.style = ScalarStyle.ANY}) {
+  YamlScalarWrap(this.value, {this.style = ScalarStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl) {
     ArgumentError.checkNotNull(style, 'scalarStyle');
   }
 
@@ -72,10 +73,11 @@ class YamlMapWrap
   final Map<dynamic, YamlNode> nodes;
 
   @override
-  final SourceSpan span = null;
+  final SourceSpan span;
 
   factory YamlMapWrap(Map dartMap,
-      {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
+      {CollectionStyle collectionStyle = CollectionStyle.ANY,
+      Object sourceUrl}) {
     ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
 
     var wrappedMap = deepEqualsMap<dynamic, YamlNode>();
@@ -85,10 +87,13 @@ class YamlMapWrap
       var wrappedValue = wrapAsYamlNode(entry.value);
       wrappedMap[wrappedKey] = wrappedValue;
     }
-    return YamlMapWrap._(wrappedMap, style: collectionStyle);
+    return YamlMapWrap._(wrappedMap,
+        style: collectionStyle, sourceUrl: sourceUrl);
   }
 
-  YamlMapWrap._(this.nodes, {this.style = CollectionStyle.ANY});
+  YamlMapWrap._(this.nodes,
+      {this.style = CollectionStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl);
 
   @override
   dynamic operator [](Object key) => nodes[key]?.value;
@@ -111,7 +116,7 @@ class YamlListWrap with collection.ListMixin implements YamlList {
   final List<YamlNode> nodes;
 
   @override
-  final SourceSpan span = null;
+  final SourceSpan span;
 
   @override
   int get length => nodes.length;
@@ -122,14 +127,18 @@ class YamlListWrap with collection.ListMixin implements YamlList {
   }
 
   factory YamlListWrap(List dartList,
-      {CollectionStyle collectionStyle = CollectionStyle.ANY}) {
+      {CollectionStyle collectionStyle = CollectionStyle.ANY,
+      Object sourceUrl}) {
     ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
 
     final wrappedList = dartList.map((v) => wrapAsYamlNode(v)).toList();
-    return YamlListWrap._(wrappedList, style: collectionStyle);
+    return YamlListWrap._(wrappedList,
+        style: collectionStyle, sourceUrl: sourceUrl);
   }
 
-  YamlListWrap._(this.nodes, {this.style = CollectionStyle.ANY});
+  YamlListWrap._(this.nodes,
+      {this.style = CollectionStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl);
 
   @override
   dynamic operator [](int index) => nodes[index].value;
