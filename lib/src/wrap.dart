@@ -6,7 +6,6 @@ import 'package:yaml/yaml.dart';
 import 'equality.dart';
 import 'utils.dart';
 
-// TODO: if value is a yamlnode, should we try applying the style too
 /// Wraps [value] into a [YamlNode].
 ///
 /// [Map]s, [List]s and Scalars will be wrapped as [YamlMap]s, [YamlList]s,
@@ -14,13 +13,8 @@ import 'utils.dart';
 /// and [value] is a collection or scalar, the wrapped [YamlNode] will have the
 /// respective style, otherwise it defaults to the ANY style.
 ///
-///
-///
-///
-///
-///  with [collectionStyle] or [scalarStyle] applied.
-/// [value] or its children can be instances of [YamlNode], in which case no further
-/// wrapping will be done on them.
+/// If a [YamlNode] is passed in, no further wrapping will be done, and the
+/// [collectionStyle]/[scalarStyle] will not be applied.
 YamlNode wrapAsYamlNode(Object value,
     {CollectionStyle collectionStyle = CollectionStyle.ANY,
     ScalarStyle scalarStyle = ScalarStyle.ANY}) {
@@ -33,9 +27,22 @@ YamlNode wrapAsYamlNode(Object value,
     ArgumentError.checkNotNull(collectionStyle, 'collectionStyle');
     return YamlListWrap(value, collectionStyle: collectionStyle);
   } else {
+    assertValidScalar(value);
+
     ArgumentError.checkNotNull(scalarStyle, 'scalarStyle');
     return YamlScalarWrap(value, style: scalarStyle);
   }
+}
+
+/// Asserts that [value] is a valid scalar according to YAML.
+///
+/// A valid scalar is a number, String, boolean, or null.
+void assertValidScalar(Object value) {
+  if (value is num || value is String || value is bool || value == null) {
+    return;
+  }
+
+  throw ArgumentError.value(value, 'value', 'Not a valid scalar type!');
 }
 
 /// Internal class that allows us to define a constructor on [YamlScalar]
