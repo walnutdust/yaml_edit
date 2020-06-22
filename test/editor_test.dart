@@ -160,14 +160,6 @@ c: 3
         expect(result, isA<YamlScalar>());
         expect(result.value, equals(42));
       });
-
-      test('simple example with symbol return', () {
-        final doc = YamlEditor('{a: {d: 4}, c: ~}');
-        var result = doc.parseAt(['b'], orElse: #doesNotExist);
-
-        expect(result, isA<YamlScalar>());
-        expect(result.value, equals(#doesNotExist));
-      });
     });
   });
 

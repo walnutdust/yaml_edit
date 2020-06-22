@@ -69,7 +69,7 @@ class YamlEditor {
 
   /// Parses the document to return [YamlNode] currently present at [path]. If no [YamlNode]s exist
   /// at [path], [parseAt] will return a [YamlNode]-wrapped [orElse] if it is defined, or throw an
-  /// [Error] otherwise.
+  /// [Error] otherwise. The value passed to [orElse] has to be a valid YAML element (i.e. scalar/ list/ map).
   ///
   /// To get `null` when [path] does not point to a value in the [YamlNode]-tree, simply pass `orElse: null`.
   /// ```dart
