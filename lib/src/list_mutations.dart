@@ -2,7 +2,6 @@ import 'package:yaml/yaml.dart';
 
 import 'source_edit.dart';
 import 'utils.dart';
-import 'wrap.dart';
 
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of setting the element at [index] to [newValue] when re-parsed.
@@ -66,14 +65,6 @@ SourceEdit removeInList(String yaml, YamlList list, int index) {
   } else {
     return _removeFromBlockList(yaml, list, nodeToRemove, index);
   }
-}
-
-/// Returns a new [YamlList] constructed by applying [update] onto the [nodes]
-/// of this [YamlList].
-YamlList updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
-  final newNodes = [...list.nodes];
-  update(newNodes);
-  return wrapAsYamlNode(newNodes);
 }
 
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the

@@ -112,15 +112,10 @@ class YamlEditor {
     try {
       return _traverse(path);
     } on PathError {
-      if (orElse == #noArg) {
-        rethrow;
-      } else {
-        if (orElse is YamlNode) {
-          return orElse;
-        }
+      if (orElse == #noArg) rethrow;
+      if (orElse is YamlNode) return orElse;
 
-        return wrapAsYamlNode(orElse);
-      }
+      return wrapAsYamlNode(orElse);
     }
   }
 
@@ -182,21 +177,28 @@ class YamlEditor {
     final valueNode = wrapAsYamlNode(value);
 
     if (parentNode is YamlList) {
-      _performEdit(
-          assignInList(_yaml, parentNode, keyOrIndex, value),
-          collectionPath,
-          updatedYamlList(
-              parentNode, (nodes) => nodes[keyOrIndex] = valueNode));
+      var expectedList =
+          updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
+
+      expectedList = ensureNodeContextStyling(
+          expectedList, parentNode.style == CollectionStyle.FLOW);
+
+      _performEdit(assignInList(_yaml, parentNode, keyOrIndex, value),
+          collectionPath, expectedList);
       return;
     }
 
     if (parentNode is YamlMap) {
       final keyNode = wrapAsYamlNode(keyOrIndex);
 
-      _performEdit(
-          assignInMap(_yaml, parentNode, keyOrIndex, value),
-          collectionPath,
-          updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode));
+      var expectedMap =
+          updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode);
+
+      expectedMap = ensureNodeContextStyling(
+          expectedMap, parentNode.style == CollectionStyle.FLOW);
+
+      _performEdit(assignInMap(_yaml, parentNode, keyOrIndex, value),
+          collectionPath, expectedMap);
       return;
     }
 
@@ -238,9 +240,11 @@ class YamlEditor {
 
     final edit = insertInList(_yaml, list, index, value);
 
-    final expectedList = updatedYamlList(
+    var expectedList = updatedYamlList(
         list, (nodes) => nodes.insert(index, wrapAsYamlNode(value)));
 
+    expectedList = ensureNodeContextStyling(
+        expectedList, expectedList.style == CollectionStyle.FLOW);
     _performEdit(edit, path, expectedList);
   }
 
@@ -447,3 +451,5 @@ $expectedTree''');
     }
   }
 }
+
+/// TODO: if node at path is block context and folded/literal, update the content

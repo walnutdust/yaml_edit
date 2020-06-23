@@ -11,7 +11,7 @@ Map<K, V> deepEqualsMap<K, V>() =>
 /// Compares two [Object]s for deep equality. This implementation differs from
 /// `package:yaml`'s deep equality notation by allowing for comparison of non-scalar
 /// map keys.
-bool deepEquals(obj1, obj2) {
+bool deepEquals(dynamic obj1, dynamic obj2) {
   if (obj1 is YamlNode) obj1 = obj1.value;
   if (obj2 is YamlNode) obj2 = obj2.value;
 
@@ -30,6 +30,9 @@ bool deepEquals(obj1, obj2) {
 bool listDeepEquals(List list1, List list2) {
   if (list1.length != list2.length) return false;
 
+  if (list1 is YamlList) list1 = (list1 as YamlList).nodes;
+  if (list2 is YamlList) list2 = (list2 as YamlList).nodes;
+
   for (var i = 0; i < list1.length; i++) {
     if (!deepEquals(list1[i], list2[i])) {
       return false;
@@ -43,6 +46,9 @@ bool listDeepEquals(List list1, List list2) {
 /// equality notation by allowing for comparison of non-scalar map keys.
 bool mapDeepEquals(Map map1, Map map2) {
   if (map1.length != map2.length) return false;
+
+  if (map1 is YamlList) map1 = (map1 as YamlMap).nodes;
+  if (map2 is YamlList) map2 = (map2 as YamlMap).nodes;
 
   for (var key in map1.keys) {
     if (!containsKey(map2, key)) {

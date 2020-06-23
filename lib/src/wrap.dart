@@ -6,6 +6,32 @@ import 'package:yaml/yaml.dart';
 import 'equality.dart';
 import 'utils.dart';
 
+/// Returns a new [YamlList] constructed by applying [update] onto the [nodes]
+/// of this [YamlList].
+YamlList updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
+  final newNodes = [...list.nodes];
+  update(newNodes);
+  return wrapAsYamlNode(newNodes);
+}
+
+/// Returns a new [YamlMap] constructed by applying [update] onto the [nodes]
+/// of this [YamlMap].
+YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
+  final dummyMap = deepEqualsMap();
+  dummyMap.addAll(map.nodes);
+
+  update(dummyMap);
+  final updatedMap = {};
+
+  /// This workaround is necessary since [yamlNodeFrom] will re-wrap [YamlNode]s,
+  /// so we need to unwrap them before passing them in.
+  for (var key in dummyMap.keys) {
+    updatedMap[key.value] = dummyMap[key].value;
+  }
+
+  return wrapAsYamlNode(updatedMap);
+}
+
 /// Wraps [value] into a [YamlNode].
 ///
 /// [Map]s, [List]s and Scalars will be wrapped as [YamlMap]s, [YamlList]s,
@@ -49,8 +75,10 @@ void assertValidScalar(Object value) {
 /// which takes in [style] as an argument.
 class YamlScalarWrap implements YamlScalar {
   /// The [ScalarStyle] to be used for the scalar.
+  ScalarStyle _style;
+
   @override
-  final ScalarStyle style;
+  ScalarStyle get style => _style;
 
   @override
   final SourceSpan span;
@@ -58,8 +86,10 @@ class YamlScalarWrap implements YamlScalar {
   @override
   final dynamic value;
 
-  YamlScalarWrap(this.value, {this.style = ScalarStyle.ANY, Object sourceUrl})
-      : span = shellSpan(sourceUrl) {
+  YamlScalarWrap(this.value,
+      {ScalarStyle style = ScalarStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl),
+        _style = style {
     ArgumentError.checkNotNull(style, 'scalarStyle');
   }
 
@@ -73,8 +103,10 @@ class YamlMapWrap
     with collection.MapMixin, UnmodifiableMapMixin
     implements YamlMap {
   /// The [CollectionStyle] to be used for the map.
+  CollectionStyle _style;
+
   @override
-  final CollectionStyle style;
+  CollectionStyle get style => _style;
 
   @override
   final Map<dynamic, YamlNode> nodes;
@@ -94,13 +126,15 @@ class YamlMapWrap
       var wrappedValue = wrapAsYamlNode(entry.value);
       wrappedMap[wrappedKey] = wrappedValue;
     }
+
     return YamlMapWrap._(wrappedMap,
         style: collectionStyle, sourceUrl: sourceUrl);
   }
 
   YamlMapWrap._(this.nodes,
-      {this.style = CollectionStyle.ANY, Object sourceUrl})
-      : span = shellSpan(sourceUrl);
+      {CollectionStyle style = CollectionStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl),
+        _style = style;
 
   @override
   dynamic operator [](Object key) => nodes[key]?.value;
@@ -116,8 +150,10 @@ class YamlMapWrap
 /// which takes in [style] as an argument.
 class YamlListWrap with collection.ListMixin implements YamlList {
   /// The [CollectionStyle] to be used for the list.
+  CollectionStyle _style;
+
   @override
-  final CollectionStyle style;
+  CollectionStyle get style => _style;
 
   @override
   final List<YamlNode> nodes;
@@ -144,8 +180,9 @@ class YamlListWrap with collection.ListMixin implements YamlList {
   }
 
   YamlListWrap._(this.nodes,
-      {this.style = CollectionStyle.ANY, Object sourceUrl})
-      : span = shellSpan(sourceUrl);
+      {CollectionStyle style = CollectionStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl),
+        _style = style;
 
   @override
   dynamic operator [](int index) => nodes[index].value;
@@ -157,4 +194,100 @@ class YamlListWrap with collection.ListMixin implements YamlList {
 
   @override
   List get value => this;
+}
+
+/// Sets the style of a [YamlMapWrap].
+///
+/// This function should not be exposed publicly.
+void setMapWrapStyle(YamlMapWrap node, CollectionStyle style) {
+  node._style = style;
+}
+
+/// Sets the style of a [YamlListWrap].
+///
+/// This function should not be exposed publicly.
+void setListWrapStyle(YamlListWrap node, CollectionStyle style) {
+  node._style = style;
+}
+
+/// Sets the style of a [YamlScalarWrap].
+///
+/// This function should not be exposed publicly.
+void setScalarWrapStyle(YamlScalarWrap node, ScalarStyle style) {
+  node._style = style;
+}
+
+/// If [node] was created with [wrapAsYamlNode], ensure that the styles applied matches
+/// the context (i.e. a [YamlScalar] in a flow context should not have [ScalarStyle.FOLDED]
+/// style).
+///
+/// TODO:(walnut) Investigate how we wish to proceed if [node] was not created by our
+/// wrapping.
+YamlNode ensureNodeContextStyling(YamlNode node, [bool flowContext = false]) {
+  if (node is YamlScalarWrap) {
+    return _ensureScalarContextStyling(node, flowContext);
+  } else if (node is YamlListWrap) {
+    return _ensureListContextStyling(node, flowContext);
+  } else if (node is YamlMapWrap) {
+    return _ensureMapContextStyling(node, flowContext);
+  }
+  return node;
+}
+
+/// Ensure's that [node]'s styles conforms to the context (i.e. a [YamlScalar] in a flow context
+/// should not have [ScalarStyle.FOLDED] style). If [node.style] defies the context, set
+/// [node.style] to be [ScalarStyle.ANY].
+YamlScalarWrap _ensureScalarContextStyling(YamlScalarWrap node,
+    [bool flowContext = false]) {
+  if (flowContext) {
+    if (node.style == ScalarStyle.FOLDED || node.style == ScalarStyle.LITERAL) {
+      setScalarWrapStyle(node, ScalarStyle.ANY);
+    }
+  }
+
+  if (node.value is String &&
+      (node.style == ScalarStyle.FOLDED || node.style == ScalarStyle.LITERAL)) {
+    return wrapAsYamlNode(node.value + '\n');
+  }
+
+  return node;
+}
+
+/// Ensure's that [list]'s styles conforms to the context (i.e. a [YamlList] in a flow context
+/// should not have [CollectionStyle.BLOCK] style), seting  [list.style] to be
+/// [CollectionStyle.FLOW] otherwise.
+YamlListWrap _ensureListContextStyling(YamlListWrap list,
+    [bool flowContext = false]) {
+  if (flowContext && list.style != CollectionStyle.FLOW) {
+    setListWrapStyle(list, CollectionStyle.FLOW);
+  }
+
+  if (list.style == CollectionStyle.FLOW) flowContext = true;
+
+  var updatedNodes = [];
+
+  for (var child in list.nodes) {
+    updatedNodes.add(ensureNodeContextStyling(child, flowContext));
+  }
+
+  return wrapAsYamlNode(updatedNodes);
+}
+
+/// Ensure's that [map]'s styles conforms to the context (i.e. a [YamlMap] in a flow context
+/// should not have [CollectionStyle.BLOCK] style), seting  [map.style] to be
+/// [CollectionStyle.FLOW] otherwise.
+YamlMapWrap _ensureMapContextStyling(YamlMapWrap map,
+    [bool flowContext = false]) {
+  if (flowContext && map.style != CollectionStyle.FLOW) {
+    setMapWrapStyle(map, CollectionStyle.FLOW);
+  }
+
+  if (map.style == CollectionStyle.FLOW) flowContext = true;
+
+  final updatedMap = deepEqualsMap();
+  for (var key in map.nodes.keys) {
+    updatedMap[key.value] = ensureNodeContextStyling(map.nodes[key]);
+  }
+
+  return wrapAsYamlNode(updatedMap);
 }

@@ -158,10 +158,11 @@ c:
             [0],
             wrapAsYamlNode([
               wrapAsYamlNode('plain string', scalarStyle: ScalarStyle.PLAIN),
-              // yamlNodeFrom('folded string', scalarStyle: ScalarStyle.FOLDED),
+              wrapAsYamlNode('folded string', scalarStyle: ScalarStyle.FOLDED),
               wrapAsYamlNode('single-quoted string',
                   scalarStyle: ScalarStyle.SINGLE_QUOTED),
-              // yamlNodeFrom('literal string', scalarStyle: ScalarStyle.LITERAL),
+              wrapAsYamlNode('literal string',
+                  scalarStyle: ScalarStyle.LITERAL),
               wrapAsYamlNode('double-quoted string',
                   scalarStyle: ScalarStyle.DOUBLE_QUOTED),
             ]));
@@ -169,12 +170,84 @@ c:
         expect(doc.toString(), equals('''
 - 
   - plain string
+  - >
+        folded string
   - 'single-quoted string'
+  - |
+        literal string
   - "double-quoted string"'''));
         expectYamlBuilderValue(doc, [
           [
             'plain string',
+            'folded string\n',
             'single-quoted string',
+            'literal string\n',
+            'double-quoted string',
+          ]
+        ]);
+      });
+
+      test('different scalars in block map!', () {
+        final doc = YamlEditor('strings: strings');
+        doc.assign(
+            ['strings'],
+            wrapAsYamlNode({
+              'plain': wrapAsYamlNode('string', scalarStyle: ScalarStyle.PLAIN),
+              'folded':
+                  wrapAsYamlNode('string', scalarStyle: ScalarStyle.FOLDED),
+              'single-quoted': wrapAsYamlNode('string',
+                  scalarStyle: ScalarStyle.SINGLE_QUOTED),
+              'literal':
+                  wrapAsYamlNode('string', scalarStyle: ScalarStyle.LITERAL),
+              'double-quoted': wrapAsYamlNode('string',
+                  scalarStyle: ScalarStyle.DOUBLE_QUOTED),
+            }));
+
+        expect(doc.toString(), equals('''
+strings: 
+  plain: string
+  folded: >
+        string
+  'single-quoted': 'string'
+  literal: |
+        string
+  'double-quoted': "string"'''));
+        expectYamlBuilderValue(doc, {
+          'strings': {
+            'plain': 'string',
+            'folded': 'string\n',
+            'single-quoted': 'string',
+            'literal': 'string\n',
+            'double-quoted': 'string',
+          }
+        });
+      });
+
+      test('different scalars in flow list!', () {
+        final doc = YamlEditor('[0]');
+        doc.assign(
+            [0],
+            wrapAsYamlNode([
+              wrapAsYamlNode('plain string', scalarStyle: ScalarStyle.PLAIN),
+              wrapAsYamlNode('folded string', scalarStyle: ScalarStyle.FOLDED),
+              wrapAsYamlNode('single-quoted string',
+                  scalarStyle: ScalarStyle.SINGLE_QUOTED),
+              wrapAsYamlNode('literal string',
+                  scalarStyle: ScalarStyle.LITERAL),
+              wrapAsYamlNode('double-quoted string',
+                  scalarStyle: ScalarStyle.DOUBLE_QUOTED),
+            ]));
+
+        expect(
+            doc.toString(),
+            equals(
+                '[[plain string, folded string, \'single-quoted string\', literal string, "double-quoted string"]]'));
+        expectYamlBuilderValue(doc, [
+          [
+            'plain string',
+            'folded string',
+            'single-quoted string',
+            'literal string',
             'double-quoted string',
           ]
         ]);

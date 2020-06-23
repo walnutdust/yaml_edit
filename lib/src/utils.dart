@@ -1,6 +1,8 @@
 import 'package:source_span/source_span.dart';
 import 'package:yaml/yaml.dart';
 
+import 'wrap.dart';
+
 /// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
 /// `false` otherwise.
 ///
@@ -118,7 +120,7 @@ String getSafeString(Object value) {
 /// starts with '>'), in which case we will produce [value] with default styling options.
 String getFlowScalar(Object value) {
   if (value is Map || value is List) {
-    AssertionError('Only scalars can be passed into getScalarString');
+    AssertionError('Only scalars can be passed into getFlowScalar');
   }
 
   if (value is YamlScalar) {
@@ -141,7 +143,7 @@ String getFlowScalar(Object value) {
 String getBlockScalar(Object value, int indentation,
     [int additionalIndentation = 2]) {
   if (value is Map || value is List) {
-    AssertionError('Only scalars can be passed into getScalarString');
+    AssertionError('Only scalars can be passed into getBlockScalar');
   }
 
   if (value is YamlScalar) {
@@ -171,7 +173,11 @@ String getBlockScalar(Object value, int indentation,
 /// will produce [value] with default styling options.
 String getFlowString(Object value) {
   if (value is List) {
-    final safeValues = value.map((e) => getFlowString(e));
+    var list = value;
+
+    if (value is YamlList) list = value.nodes;
+
+    final safeValues = list.map((e) => getFlowString(e));
     return '[' + safeValues.join(', ') + ']';
   } else if (value is Map) {
     final safeEntries = value.entries.map((e) {
@@ -217,8 +223,10 @@ String getBlockString(Object value,
 
     return '\n' + safeValues.join('\n');
   } else if (value is Map) {
+    var children = value is YamlMap ? value.nodes : value;
+
     return '\n' +
-        value.entries.map((entry) {
+        children.entries.map((entry) {
           final safeKey = getFlowString(entry.key);
           final formattedKey = ' ' * indentation + safeKey;
           final formattedValue = getBlockString(entry.value, newIndentation);

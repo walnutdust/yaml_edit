@@ -3,7 +3,6 @@ import 'package:yaml/yaml.dart';
 import 'equality.dart';
 import 'source_edit.dart';
 import 'utils.dart';
-import 'wrap.dart';
 
 /// Performs the string operation on [yaml] to achieve the effect of setting
 /// the element at [key] to [newValue] when re-parsed.
@@ -36,24 +35,6 @@ SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
   } else {
     return _removeFromBlockMap(yaml, map, keyNode, valueNode);
   }
-}
-
-/// Returns a new [YamlMap] constructed by applying [update] onto the [nodes]
-/// of this [YamlMap].
-YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
-  final dummyMap = deepEqualsMap();
-  dummyMap.addAll(map.nodes);
-
-  update(dummyMap);
-  final updatedMap = {};
-
-  /// This workaround is necessary since [yamlNodeFrom] will re-wrap [YamlNode]s,
-  /// so we need to unwrap them before passing them in.
-  for (var key in dummyMap.keys) {
-    updatedMap[key.value] = dummyMap[key].value;
-  }
-
-  return wrapAsYamlNode(updatedMap);
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of adding
