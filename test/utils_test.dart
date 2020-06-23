@@ -208,10 +208,10 @@ strings:
   plain: string
   folded: >
         string
-  'single-quoted': 'string'
+  single-quoted: 'string'
   literal: |
         string
-  'double-quoted': "string"'''));
+  double-quoted: "string"'''));
         expectYamlBuilderValue(doc, {
           'strings': {
             'plain': 'string',

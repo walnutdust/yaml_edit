@@ -3,77 +3,14 @@ import 'package:yaml/yaml.dart';
 
 import 'wrap.dart';
 
-/// Returns `true` if [input] could be interpreted as a boolean by `package:yaml`,
-/// `false` otherwise.
-///
-/// See https://yaml.org/spec/1.2/spec.html#id2805019.
-bool isPossibleBoolean(String input) {
-  final trimmedInput = input.trim();
-
-  switch (trimmedInput) {
-    case 'true':
-    case 'True':
-    case 'TRUE':
-    case 'false':
-    case 'False':
-    case 'FALSE':
-      return true;
-    default:
-      return false;
+/// Determines if [string] is dangerous by checking if parsing the plain string can
+/// result in a result different from [string].
+bool isDangerousString(String string) {
+  try {
+    return loadYamlNode(string).value != string;
+  } catch (YamlException) {
+    return true;
   }
-}
-
-/// Returns `true` if [input] could be interpreted as a null value by `package:yaml`,
-/// `false` otherwise.
-///
-/// See https://yaml.org/spec/1.2/spec.html#id2805019.
-bool isPossibleNull(String input) {
-  final trimmedInput = input.trim();
-
-  switch (trimmedInput) {
-    case '':
-    case 'null':
-    case 'Null':
-    case 'NULL':
-    case '~':
-      return true;
-    default:
-      return false;
-  }
-}
-
-/// Checks if [string] contains a YAML control character
-///
-/// TODO (walnut): Ensure that all the possibilities are covered.
-bool containsControlCharacter(String string) {
-  final controlCharacters = [
-    '!',
-    '&',
-    '*',
-    '-',
-    '[',
-    ']',
-    '#',
-    '|',
-    '>',
-    '@',
-    '`',
-    '"',
-    '{',
-    '}',
-    ':'
-  ];
-
-  for (var controlChar in controlCharacters) {
-    if (string.contains(controlChar)) return true;
-  }
-
-  return false;
-}
-
-/// Checks if [input] has leading or trailing whitespaces.
-bool paddedByWhiteSpace(String input) {
-  return input.trim().length - input.length != 0;
 }
 
 /// Returns a safe string by ensuring that if [value] was meant to be a string, it
@@ -95,10 +32,7 @@ String getSafeString(Object value) {
 
     /// If it contains a dangerous character we want to wrap the result with single
     /// quotes
-    if (containsControlCharacter(value) ||
-        isPossibleBoolean(value) ||
-        isPossibleNull(value) ||
-        paddedByWhiteSpace(value)) {
+    if (isDangerousString(value)) {
       /// But we need to escape the characters if they contain a single quote.
       if (value.contains('\'')) {
         result = value.replaceAll('\'', '\'\'');

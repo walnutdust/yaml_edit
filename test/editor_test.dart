@@ -380,14 +380,6 @@ true: 'true'
     });
 
     test('simple flow map (6)', () {
-      final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
-      doc.assign(['YAML'], '> hi');
-
-      expect(doc.toString(), equals("{YAML: '> hi'}"));
-      expectYamlBuilderValue(doc, {'YAML': '> hi'});
-    });
-
-    test('simple flow map (7)', () {
       final doc = YamlEditor('{[1,2,3]: a}');
       doc.assign([
         [1, 2, 3]
@@ -399,7 +391,7 @@ true: 'true'
       });
     });
 
-    test('simple flow map (8)', () {
+    test('simple flow map (7)', () {
       final doc = YamlEditor('{{a: 1}: a}');
       doc.assign([
         {'a': 1}

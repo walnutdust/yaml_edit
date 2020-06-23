@@ -31,3 +31,18 @@ These tests are automatically run with `pub run test`.
 Please file feature requests and bugs at the [issue tracker][tracker].
 
 [tracker]: https://github.com/walnutdust/yaml_edit/issues
+
+## Known issues
+
+1. If the anchor node of a repeated node is modified, the alias will not be updated.
+
+```dart
+final doc = YamlEditor('''
+- &SS Sammy Sosa
+- *SS''');
+
+doc.assign([0], 'test');
+```
+
+2. Users are not allow to define tags in the modifications.
+3.
