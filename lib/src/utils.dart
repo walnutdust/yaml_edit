@@ -225,16 +225,22 @@ int getMapIndentation(String yaml, YamlMap map) {
 
   /// An empty block map doesn't really exist.
   if (map.isEmpty) {
-    throw UnsupportedError('Unable to get indentation for empty block list');
+    throw UnsupportedError('Unable to get indentation for empty block map');
   }
 
   /// Use the number of spaces between the last key and the newline as indentation.
   final lastKey = map.nodes.keys.last as YamlNode;
   final lastSpanOffset = lastKey.span.start.offset;
   final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
-  if (lastNewLine == -1) return lastSpanOffset;
+  final lastQuestionMark = yaml.lastIndexOf('?', lastSpanOffset);
 
-  return lastSpanOffset - lastNewLine - 1;
+  if (lastQuestionMark == -1) {
+    if (lastNewLine == -1) return lastSpanOffset;
+    return lastSpanOffset - lastNewLine - 1;
+  }
+
+  if (lastNewLine == -1) return lastQuestionMark;
+  return lastQuestionMark - lastNewLine - 1;
 }
 
 /// Gets the indentation level of the list. This is 0 if it is a flow list,

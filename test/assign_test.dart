@@ -504,6 +504,20 @@ b: 2
         expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
       });
 
+      test('with complex keys', () {
+        final doc = YamlEditor('''
+? Sammy Sosa
+? Ken Griff''');
+        doc.assign(['Mark McGwire'], null);
+        expect(doc.toString(), equals('''
+? Sammy Sosa
+? Ken Griff
+Mark McGwire: null
+'''));
+        expectYamlBuilderValue(
+            doc, {'Sammy Sosa': null, 'Ken Griff': null, 'Mark McGwire': null});
+      });
+
       test('with trailing newline', () {
         final doc = YamlEditor('''
 a: 1

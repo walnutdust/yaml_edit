@@ -41,20 +41,11 @@ final doc = YamlEditor('''
 - &SS Sammy Sosa
 - *SS''');
 
-doc.assign([0], 'test');
+doc.assign([0], 'test'); // Error in reparsing because *SS is now undefined.
 ```
 
 2. Users are not allowed to define tags in the modifications.
-3. Adding keys to a set
-
-```dart
-final doc = YamlEditor('''
-? Sammy Sosa
-? Ken Griff''');
-doc.assign(['Mark McGwire'], null);
-```
-
-4. Supports only ASCII strings for now.
-5. If strings contain an escaped character, they can only be interpreted in
+3. Supports only ASCII strings for now.
+4. If strings contain an escaped character, they can only be interpreted in
    the double-quoted style. Possible escaping approach - convert to code units, and replace?
-6. Keys will always be added in the flow style.
+5. Map keys will always be added in the flow style.
