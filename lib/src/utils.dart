@@ -4,7 +4,7 @@ import 'package:yaml/yaml.dart';
 import 'wrap.dart';
 
 /// Determines if [string] is dangerous by checking if parsing the plain string can
-/// result in a result different from [string].
+/// return a result different from [string].
 bool isDangerousString(String string) {
   try {
     return loadYamlNode(string).value != string;
@@ -308,3 +308,26 @@ SourceSpan shellSpan(Object sourceUrl) {
   var shellSourceLocation = SourceLocation(0, sourceUrl: sourceUrl);
   return SourceSpanBase(shellSourceLocation, shellSourceLocation, '');
 }
+
+/// List of escape characters.
+///
+/// See https://yaml.org/spec/1.2/spec.html#id2776092
+const List<int> yamlEscapeSequences = [
+  0, //  Escaped ASCII null (#x0) character.
+  7, //  Escaped ASCII bell (#x7) character.
+  8, //  Escaped ASCII backspace (#x8) character.
+  9, //  Escaped ASCII horizontal tab (#x9) character. Printable
+  10, //  Escaped ASCII line feed (#xA) character. Line Break.
+  11, // 	Escaped ASCII vertical tab (#xB) character.
+  12, //  Escaped ASCII form feed (#xC) character.
+  13, //  Escaped ASCII carriage return (#xD) character. Line Break.
+  27, //  Escaped ASCII escape (#x1B) character.
+  32, //  Escaped ASCII space (#x20) character. Printable
+  34, //  Escaped ASCII double quote (#x22).
+  47, //  Escaped ASCII slash (#x2F), for JSON compatibility.
+  72, //  Escaped ASCII back slash (#x5C).
+  133, //  Escaped Unicode next line (#x85) character.
+  160, //  Escaped Unicode non-breaking space (#xA0) character.
+  8232, //  Escaped Unicode line separator (#x2028) character.
+  8233, //  Escaped Unicode paragraph separator (#x2029) character.
+];

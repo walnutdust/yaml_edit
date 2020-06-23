@@ -44,5 +44,17 @@ final doc = YamlEditor('''
 doc.assign([0], 'test');
 ```
 
-2. Users are not allow to define tags in the modifications.
-3.
+2. Users are not allowed to define tags in the modifications.
+3. Adding keys to a set
+
+```dart
+final doc = YamlEditor('''
+? Sammy Sosa
+? Ken Griff''');
+doc.assign(['Mark McGwire'], null);
+```
+
+4. Supports only ASCII strings for now.
+5. If strings contain an escaped character, they can only be interpreted in
+   the double-quoted style. Possible escaping approach - convert to code units, and replace?
+6. Keys will always be added in the flow style.
