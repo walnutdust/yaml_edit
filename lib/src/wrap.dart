@@ -81,9 +81,6 @@ class YamlScalarWrap implements YamlScalar {
         _style = style {
     ArgumentError.checkNotNull(style, 'scalarStyle');
   }
-
-  @override
-  String toString() => value.toString();
 }
 
 /// Internal class that allows us to define a constructor on [YamlMap]

@@ -253,12 +253,51 @@ strings:
         ]);
       });
 
-      test('wraps non-printable strings in double-quotes', () {
+      test('wraps non-printable strings in double-quotes in flow context', () {
         final doc = YamlEditor('[0]');
-        doc.assign([0], '\x00');
-        expect(doc.toString(), equals('["\\0"]'));
-        expectYamlBuilderValue(doc, ['\x00']);
+        doc.assign([0], '\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"');
+        expect(
+            doc.toString(), equals('["\\0\\a\\b\\v\\f\\r\\e\\N\\_\\L\\P\\""]'));
+        expectYamlBuilderValue(
+            doc, ['\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"']);
       });
+
+      test('wraps non-printable strings in double-quotes in block context', () {
+        final doc = YamlEditor('- 0');
+        doc.assign([0], '\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"');
+        expect(
+            doc.toString(), equals('- "\\0\\a\\b\\v\\f\\r\\e\\N\\_\\L\\P\\""'));
+        expectYamlBuilderValue(
+            doc, ['\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"']);
+      });
+    });
+  });
+
+  group('assertValidScalar', () {
+    test('does nothing with a boolean', () {
+      expect(() => assertValidScalar(true), returnsNormally);
+    });
+
+    test('does nothing with a number', () {
+      expect(() => assertValidScalar(1.12), returnsNormally);
+    });
+    test('does nothing with infinity', () {
+      expect(() => assertValidScalar(double.infinity), returnsNormally);
+    });
+    test('does nothing with a String', () {
+      expect(() => assertValidScalar('test'), returnsNormally);
+    });
+
+    test('does nothing with null', () {
+      expect(() => assertValidScalar(null), returnsNormally);
+    });
+
+    test('throws on map', () {
+      expect(() => assertValidScalar({'a': 1}), throwsArgumentError);
+    });
+
+    test('throws on list', () {
+      expect(() => assertValidScalar([1]), throwsArgumentError);
     });
   });
 }

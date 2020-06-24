@@ -16,6 +16,12 @@ void main() {
     });
   });
 
+  test('throws RangeError if index is out of range', () {
+    final doc = YamlEditor('[1, 2]');
+    expect(() => doc.insertIntoList([], -1, 0), throwsRangeError);
+    expect(() => doc.insertIntoList([], 3, 0), throwsRangeError);
+  });
+
   group('block list', () {
     test('(1)', () {
       final doc = YamlEditor('''

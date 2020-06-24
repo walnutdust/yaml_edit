@@ -1,6 +1,7 @@
 import 'package:yaml/yaml.dart';
 
 import 'source_edit.dart';
+import 'strings.dart';
 import 'utils.dart';
 
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the

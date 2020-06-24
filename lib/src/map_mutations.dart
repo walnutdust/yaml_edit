@@ -2,6 +2,7 @@ import 'package:yaml/yaml.dart';
 
 import 'equality.dart';
 import 'source_edit.dart';
+import 'strings.dart';
 import 'utils.dart';
 
 /// Performs the string operation on [yaml] to achieve the effect of setting
