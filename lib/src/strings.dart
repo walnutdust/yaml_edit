@@ -75,7 +75,7 @@ String _getSingleQuotedString(String string) {
 String _getFoldedString(String string, int indentation) {
   var result = '>\n';
   result += ' ' * indentation;
-  return result + _tryGetPlainString(string);
+  return result + _tryGetPlainString(string).replaceAll('\n', '\n\n');
 }
 
 /// Generates a YAML-safe literal string.
@@ -124,8 +124,7 @@ String getFlowScalar(Object value) {
 /// possible. Certain cases make this impossible (e.g. a folded string scalar
 /// 'null'), in which case we will produce [value] with default styling
 /// options.
-String getBlockScalar(Object value, int indentation,
-    [int additionalIndentation = 2]) {
+String getBlockScalar(Object value, int indentation) {
   if (value is YamlScalar) {
     assertValidScalar(value.value);
 
@@ -139,12 +138,10 @@ String getBlockScalar(Object value, int indentation,
       }
 
       if (value.style == ScalarStyle.FOLDED) {
-        return _getFoldedString(
-            value.value, indentation + additionalIndentation);
+        return _getFoldedString(value.value, indentation);
       }
       if (value.style == ScalarStyle.LITERAL) {
-        return _getLiteralString(
-            value.value, indentation + additionalIndentation);
+        return _getLiteralString(value.value, indentation);
       }
     }
 
@@ -214,18 +211,17 @@ String getBlockString(Object value,
       return ' ' * indentation + '- $valueString';
     });
 
-    return '\n' + safeValues.join('\n');
+    return safeValues.join('\n');
   } else if (value is Map) {
     var children = value is YamlMap ? value.nodes : value;
 
-    return '\n' +
-        children.entries.map((entry) {
-          final safeKey = getFlowString(entry.key);
-          final formattedKey = ' ' * indentation + safeKey;
-          final formattedValue = getBlockString(entry.value, newIndentation);
+    return children.entries.map((entry) {
+      final safeKey = getFlowString(entry.key);
+      final formattedKey = ' ' * indentation + safeKey;
+      final formattedValue = getBlockString(entry.value, newIndentation);
 
-          return formattedKey + ': ' + formattedValue;
-        }).join('\n');
+      return formattedKey + ': ' + formattedValue;
+    }).join('\n');
   }
 
   return getBlockScalar(value, newIndentation);

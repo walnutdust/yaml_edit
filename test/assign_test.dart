@@ -7,12 +7,12 @@ void main() {
   group('throws', () {
     test('RangeError in list if index is negative', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.assign([-1], 'hi'), throwsRangeError);
+      expect(() => doc.assign([-1], 'test'), throwsRangeError);
     });
 
     test('RangeError in list if index is larger than list length', () {
       final doc = YamlEditor("- YAML Ain't Markup Language");
-      expect(() => doc.assign([2], 'hi'), throwsRangeError);
+      expect(() => doc.assign([2], 'test'), throwsRangeError);
     });
 
     test('PathError in list if attempting to set a key of a scalar', () {
@@ -42,7 +42,7 @@ void main() {
       final doc = YamlEditor('test');
       doc.assign([], {'a': 1});
 
-      expect(doc.toString(), equals('{a: 1}'));
+      expect(doc.toString(), equals('a: 1'));
       expectYamlBuilderValue(doc, {'a': 1});
     });
 
@@ -75,18 +75,18 @@ void main() {
     group('block map', () {
       test('(1)', () {
         final doc = YamlEditor("YAML: YAML Ain't Markup Language");
-        doc.assign(['YAML'], 'hi');
+        doc.assign(['YAML'], 'test');
 
-        expect(doc.toString(), equals('YAML: hi'));
-        expectYamlBuilderValue(doc, {'YAML': 'hi'});
+        expect(doc.toString(), equals('YAML: test'));
+        expectYamlBuilderValue(doc, {'YAML': 'test'});
       });
 
       test('with comment', () {
         final doc = YamlEditor("YAML: YAML Ain't Markup Language # comment");
-        doc.assign(['YAML'], 'hi');
+        doc.assign(['YAML'], 'test');
 
-        expect(doc.toString(), equals('YAML: hi # comment'));
-        expectYamlBuilderValue(doc, {'YAML': 'hi'});
+        expect(doc.toString(), equals('YAML: test # comment'));
+        expectYamlBuilderValue(doc, {'YAML': 'test'});
       });
 
       test('nested', () {
@@ -292,27 +292,27 @@ c: 3
     group('flow map', () {
       test('(1)', () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
-        doc.assign(['YAML'], 'hi');
+        doc.assign(['YAML'], 'test');
 
-        expect(doc.toString(), equals('{YAML: hi}'));
-        expectYamlBuilderValue(doc, {'YAML': 'hi'});
+        expect(doc.toString(), equals('{YAML: test}'));
+        expectYamlBuilderValue(doc, {'YAML': 'test'});
       });
     });
 
     group('block list', () {
       test('(1)', () {
         final doc = YamlEditor("- YAML Ain't Markup Language");
-        doc.assign([0], 'hi');
+        doc.assign([0], 'test');
 
-        expect(doc.toString(), equals('- hi'));
-        expectYamlBuilderValue(doc, ['hi']);
+        expect(doc.toString(), equals('- test'));
+        expectYamlBuilderValue(doc, ['test']);
       });
 
       test('nested (1)', () {
         final doc = YamlEditor("- YAML Ain't Markup Language");
         doc.assign([0], [1, 2]);
 
-        expect(doc.toString(), equals('- \n  - 1\n  - 2'));
+        expect(doc.toString(), equals('- - 1\n  - 2'));
         expectYamlBuilderValue(doc, [
           [1, 2]
         ]);
@@ -320,18 +320,18 @@ c: 3
 
       test('with comment', () {
         final doc = YamlEditor("- YAML Ain't Markup Language # comment");
-        doc.assign([0], 'hi');
+        doc.assign([0], 'test');
 
-        expect(doc.toString(), equals('- hi # comment'));
-        expectYamlBuilderValue(doc, ['hi']);
+        expect(doc.toString(), equals('- test # comment'));
+        expectYamlBuilderValue(doc, ['test']);
       });
 
       test('with comment and spaces', () {
         final doc = YamlEditor("-  YAML Ain't Markup Language  # comment");
-        doc.assign([0], 'hi');
+        doc.assign([0], 'test');
 
-        expect(doc.toString(), equals('-  hi  # comment'));
-        expectYamlBuilderValue(doc, ['hi']);
+        expect(doc.toString(), equals('-  test  # comment'));
+        expectYamlBuilderValue(doc, ['test']);
       });
 
       test('nested (2)', () {
@@ -358,6 +358,26 @@ c: 3
           [0, 4, 2],
           2,
           3
+        ]);
+      });
+
+      test('nested (3)', () {
+        final doc = YamlEditor('''
+- 0
+- 1
+''');
+        doc.assign([0], {'item': 'Super Hoop', 'quantity': 1});
+        doc.assign([1], {'item': 'BasketBall', 'quantity': 4});
+        expect(doc.toString(), equals('''
+- item: Super Hoop
+  quantity: 1
+- item: BasketBall
+  quantity: 4
+'''));
+
+        expectYamlBuilderValue(doc, [
+          {'item': 'Super Hoop', 'quantity': 1},
+          {'item': 'BasketBall', 'quantity': 4}
         ]);
       });
 
@@ -494,7 +514,7 @@ d: 4
         expectYamlBuilderValue(doc, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
       });
 
-      /// Regression testing to ensure it works without leading whitespace
+      /// Regression testing to ensure it works without leading wtesttespace
       test('(2)', () {
         final doc = YamlEditor('a: 1');
         doc.assign(['b'], 2);

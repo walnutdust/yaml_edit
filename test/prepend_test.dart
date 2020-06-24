@@ -63,8 +63,7 @@ void main() {
 ''');
       doc.prependToList([], [4, 5, 6]);
       expect(doc.toString(), equals('''
-- 
-  - 4
+- - 4
   - 5
   - 6
 - 1

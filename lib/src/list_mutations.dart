@@ -16,9 +16,12 @@ SourceEdit assignInList(
   /// of this node while preserving comments/whitespace, while [_formatNewBlock]
   /// produces a string represnetation of a new node.
   if (list.style == CollectionStyle.BLOCK) {
-    final indentation =
-        getListIndentation(yaml, list) + detectIndentation(yaml);
+    final listIndentation = getListIndentation(yaml, list);
+    final indentation = listIndentation + detectIndentationSetting(yaml);
     valueString = getBlockString(newValue, indentation);
+    if (isCollection(newValue)) {
+      valueString = valueString.substring(indentation);
+    }
   } else {
     valueString = getFlowString(newValue);
   }
@@ -94,8 +97,12 @@ SourceEdit _appendToBlockList(String yaml, YamlList list, Object elem) {
 
 /// Formats [elem] into a new node for block lists.
 String _formatNewBlock(String yaml, YamlList list, Object elem) {
-  final indentation = getListIndentation(yaml, list) + detectIndentation(yaml);
-  final valueString = getBlockString(elem, indentation);
+  final indentation =
+      getListIndentation(yaml, list) + detectIndentationSetting(yaml);
+  var valueString = getBlockString(elem, indentation);
+  if (isCollection(elem)) {
+    valueString = valueString.substring(indentation);
+  }
   final indentedHyphen = ' ' * getListIndentation(yaml, list) + '- ';
 
   return '$indentedHyphen$valueString\n';

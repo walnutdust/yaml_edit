@@ -9,22 +9,22 @@ import 'test_utils.dart';
 void main() {
   group('detectIndentation', () {
     test('returns 2 for empty strings', () {
-      expect(detectIndentation(''), equals(2));
+      expect(detectIndentationSetting(''), equals(2));
     });
 
     test('returns 2 for strings consisting only scalars', () {
-      expect(detectIndentation('foo'), equals(2));
+      expect(detectIndentationSetting('foo'), equals(2));
     });
 
     test('returns 2 if only top-level elements are present', () {
-      expect(detectIndentation('''
+      expect(detectIndentationSetting('''
 - 1
 - 2
 - 3'''), equals(2));
     });
 
     test('detects the indentation used in nested list', () {
-      expect(detectIndentation('''
+      expect(detectIndentationSetting('''
 - 1
 - 2
 - 
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('detects the indentation used in nested map', () {
-      expect(detectIndentation('''
+      expect(detectIndentationSetting('''
 a: 1
 b: 2
 c:
@@ -42,7 +42,7 @@ c:
     });
 
     test('detects the indentation used in nested map in list', () {
-      expect(detectIndentation('''
+      expect(detectIndentationSetting('''
 - 1
 - 2
 - 
@@ -52,7 +52,7 @@ c:
 
     test('detects the indentation used in nested map in list with complex keys',
         () {
-      expect(detectIndentation('''
+      expect(detectIndentationSetting('''
 - 1
 - 2
 - 
@@ -61,7 +61,7 @@ c:
     });
 
     test('detects the indentation used in nested list in map', () {
-      expect(detectIndentation('''
+      expect(detectIndentationSetting('''
 a: 1
 b: 2
 c:
@@ -137,8 +137,7 @@ c:
             ]));
 
         expect(doc.toString(), equals('''
-- 
-  - 1
+- - 1
   - 2
   - [3, 4]
   - 5'''));
@@ -168,13 +167,12 @@ c:
             ]));
 
         expect(doc.toString(), equals('''
-- 
-  - plain string
+- - plain string
   - >
-        folded string
+      folded string
   - 'single-quoted string'
   - |
-        literal string
+      literal string
   - "double-quoted string"'''));
         expectYamlBuilderValue(doc, [
           [
@@ -207,10 +205,10 @@ c:
 strings: 
   plain: string
   folded: >
-        string
+      string
   single-quoted: 'string'
   literal: |
-        string
+      string
   double-quoted: "string"'''));
         expectYamlBuilderValue(doc, {
           'strings': {
@@ -269,6 +267,12 @@ strings:
             doc.toString(), equals('- "\\0\\a\\b\\v\\f\\r\\e\\N\\_\\L\\P\\""'));
         expectYamlBuilderValue(
             doc, ['\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"']);
+      });
+
+      test('generates folded strings properly', () {
+        final doc = YamlEditor('');
+        doc.assign([], wrapAsYamlNode('test', scalarStyle: ScalarStyle.FOLDED));
+        expect(doc.toString(), equals('>\n  test'));
       });
     });
   });

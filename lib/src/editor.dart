@@ -164,7 +164,7 @@ class YamlEditor {
 
     if (path.isEmpty) {
       final end = getContentSensitiveEnd(_contents);
-      final edit = SourceEdit(0, end, getFlowString(value));
+      final edit = SourceEdit(0, end, getBlockString(value));
 
       _performEdit(edit, path, wrapAsYamlNode(value));
       return;
@@ -396,6 +396,7 @@ class YamlEditor {
 
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
+    //print(_yaml);
     final actualTree = loadYamlNode(_yaml);
 
     if (!deepEquals(actualTree, expectedTree)) {

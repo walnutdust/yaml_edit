@@ -42,9 +42,15 @@ SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
 /// the [key]:[newValue] pair when reparsed, bearing in mind that this is a block map.
 SourceEdit _addToBlockMap(
     String yaml, YamlMap map, Object key, Object newValue) {
-  final newIndentation = getMapIndentation(yaml, map) + detectIndentation(yaml);
+  final newIndentation =
+      getMapIndentation(yaml, map) + detectIndentationSetting(yaml);
   final keyString = getFlowString(key);
-  final valueString = getBlockString(newValue, newIndentation);
+
+  var valueString = getBlockString(newValue, newIndentation);
+  if (isCollection(newValue) && !isFlowYamlCollectionNode(newValue)) {
+    valueString = '\n$valueString';
+  }
+
   var formattedValue = ' ' * getMapIndentation(yaml, map) + '$keyString: ';
   var offset = map.span.end.offset;
 
@@ -85,10 +91,14 @@ SourceEdit _addToFlowMap(
 /// block map.
 SourceEdit _replaceInBlockMap(
     String yaml, YamlMap map, Object key, Object newValue) {
-  final newIndentation = getMapIndentation(yaml, map) + detectIndentation(yaml);
+  final newIndentation =
+      getMapIndentation(yaml, map) + detectIndentationSetting(yaml);
   final value = map.nodes[key];
   final keyNode = getKeyNode(map, key);
-  final valueString = getBlockString(newValue, newIndentation);
+  var valueString = getBlockString(newValue, newIndentation);
+  if (isCollection(newValue) && !isFlowYamlCollectionNode(newValue)) {
+    valueString = '\n$valueString';
+  }
 
   /// +2 accounts for the colon
   final start = keyNode.span.end.offset + 2;

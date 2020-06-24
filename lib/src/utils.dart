@@ -68,6 +68,9 @@ int getContentSensitiveEnd(YamlNode yamlNode) {
   return yamlNode.span.end.offset;
 }
 
+/// Checks if the item is a Map or a List
+bool isCollection(Object item) => item is Map || item is List;
+
 /// Gets the indentation level of the map. This is 0 if it is a flow map,
 /// but returns the number of spaces before the keys for block maps.
 int getMapIndentation(String yaml, YamlMap map) {
@@ -124,7 +127,7 @@ int getListIndentation(String yaml, YamlList list) {
 /// the candidate closest to the start of [yaml].
 ///
 /// [yaml] must be a valid YAML document as defined by `package:yaml`.
-int detectIndentation(String yaml) {
+int detectIndentationSetting(String yaml) {
   final node = loadYamlNode(yaml);
   var children;
 
@@ -194,3 +197,12 @@ final Map<int, String> doubleQuoteEscapeChars = {
   47: '\\/', //  Escaped ASCII slash (#x2F), for JSON compatibility.
   72: '\\\\', //  Escaped ASCII back slash (#x5C).
 };
+
+/// Returns if [value] is a [YamlList] or [YamlMap] with [CollectionStyle.FLOW].
+bool isFlowYamlCollectionNode(Object value) {
+  if (value is YamlList || value is YamlMap) {
+    return (value as dynamic).style == CollectionStyle.FLOW;
+  }
+
+  return false;
+}

@@ -69,8 +69,7 @@ void main() {
       doc.insertIntoList([], 1, [4, 5, 6]);
       expect(doc.toString(), equals('''
 - 1
-- 
-  - 4
+- - 4
   - 5
   - 6
 - 3
