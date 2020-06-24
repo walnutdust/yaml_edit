@@ -271,8 +271,16 @@ strings:
 
       test('generates folded strings properly', () {
         final doc = YamlEditor('');
-        doc.assign([], wrapAsYamlNode('test', scalarStyle: ScalarStyle.FOLDED));
-        expect(doc.toString(), equals('>\n  test'));
+        doc.assign(
+            [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
+        expect(doc.toString(), equals('>\n  test\n\n  test'));
+      });
+
+      test('generates literal strings properly', () {
+        final doc = YamlEditor('');
+        doc.assign(
+            [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
+        expect(doc.toString(), equals('|\n  test\n  test'));
       });
     });
   });

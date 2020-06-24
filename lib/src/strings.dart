@@ -75,7 +75,7 @@ String _getSingleQuotedString(String string) {
 String _getFoldedString(String string, int indentation) {
   var result = '>\n';
   result += ' ' * indentation;
-  return result + _tryGetPlainString(string).replaceAll('\n', '\n\n');
+  return result + string.replaceAll('\n', '\n\n' + ' ' * indentation);
 }
 
 /// Generates a YAML-safe literal string.
@@ -83,8 +83,7 @@ String _getFoldedString(String string, int indentation) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getLiteralString(String string, int indentation) {
-  final plainString = _tryGetPlainString(string);
-  final result = '|\n$plainString';
+  final result = '|\n$string';
   return result.replaceAll('\n', '\n' + ' ' * indentation);
 }
 
@@ -140,6 +139,7 @@ String getBlockScalar(Object value, int indentation) {
       if (value.style == ScalarStyle.FOLDED) {
         return _getFoldedString(value.value, indentation);
       }
+
       if (value.style == ScalarStyle.LITERAL) {
         return _getLiteralString(value.value, indentation);
       }
@@ -226,3 +226,33 @@ String getBlockString(Object value,
 
   return getBlockScalar(value, newIndentation);
 }
+
+/// List of unprintable characters.
+///
+/// See 5.7 Escape Characters https://yaml.org/spec/1.2/spec.html#id2776092
+final Map<int, String> unprintableCharCodes = {
+  0: '\\0', //  Escaped ASCII null (#x0) character.
+  7: '\\a', //  Escaped ASCII bell (#x7) character.
+  8: '\\b', //  Escaped ASCII backspace (#x8) character.
+  11: '\\v', // 	Escaped ASCII vertical tab (#xB) character.
+  12: '\\f', //  Escaped ASCII form feed (#xC) character.
+  13: '\\r', //  Escaped ASCII carriage return (#xD) character. Line Break.
+  27: '\\e', //  Escaped ASCII escape (#x1B) character.
+  133: '\\N', //  Escaped Unicode next line (#x85) character.
+  160: '\\_', //  Escaped Unicode non-breaking space (#xA0) character.
+  8232: '\\L', //  Escaped Unicode line separator (#x2028) character.
+  8233: '\\P', //  Escaped Unicode paragraph separator (#x2029) character.
+};
+
+/// List of escape characters. In particular, \x32 is not included because it
+/// can be processed normally.
+///
+/// See 5.7 Escape Characters https://yaml.org/spec/1.2/spec.html#id2776092
+final Map<int, String> doubleQuoteEscapeChars = {
+  ...unprintableCharCodes,
+  9: '\\t', //  Escaped ASCII horizontal tab (#x9) character. Printable
+  10: '\\n', //  Escaped ASCII line feed (#xA) character. Line Break.
+  34: '\\"', //  Escaped ASCII double quote (#x22).
+  47: '\\/', //  Escaped ASCII slash (#x2F), for JSON compatibility.
+  72: '\\\\', //  Escaped ASCII back slash (#x5C).
+};
