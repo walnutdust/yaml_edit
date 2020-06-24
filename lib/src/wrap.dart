@@ -60,17 +60,6 @@ YamlNode wrapAsYamlNode(Object value,
   }
 }
 
-/// Asserts that [value] is a valid scalar according to YAML.
-///
-/// A valid scalar is a number, String, boolean, or null.
-void assertValidScalar(Object value) {
-  if (value is num || value is String || value is bool || value == null) {
-    return;
-  }
-
-  throw ArgumentError.value(value, 'value', 'Not a valid scalar type!');
-}
-
 /// Internal class that allows us to define a constructor on [YamlScalar]
 /// which takes in [style] as an argument.
 class YamlScalarWrap implements YamlScalar {
@@ -219,10 +208,7 @@ void setScalarWrapStyle(YamlScalarWrap node, ScalarStyle style) {
 
 /// If [node] was created with [wrapAsYamlNode], ensure that the styles applied matches
 /// the context (i.e. a [YamlScalar] in a flow context should not have [ScalarStyle.FOLDED]
-/// style).
-///
-/// TODO:(walnut) Investigate how we wish to proceed if [node] was not created by our
-/// wrapping.
+/// style). Otherwise, we do not touch [node]'s style.
 YamlNode ensureNodeContextStyling(YamlNode node, [bool flowContext = false]) {
   if (node is YamlScalarWrap) {
     return _ensureScalarContextStyling(node, flowContext);

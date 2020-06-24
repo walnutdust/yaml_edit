@@ -5,6 +5,9 @@ import 'wrap.dart';
 
 /// Determines if [string] is dangerous by checking if parsing the plain string can
 /// return a result different from [string].
+///
+/// This function is also capable of detecting if non-printable characters are in
+/// [string].
 bool isDangerousString(String string) {
   try {
     return loadYamlNode(string).value != string;
@@ -13,86 +16,168 @@ bool isDangerousString(String string) {
   }
 }
 
-/// Returns a safe string by ensuring that if [value] was meant to be a string, it
-/// will not be interpreted otherwise.
+/// Asserts that [value] is a valid scalar according to YAML.
 ///
-/// TODO (walnut): Look into  \0, special characters, and unicode characters.
-String getSafeString(Object value) {
+/// A valid scalar is a number, String, boolean, or null.
+void assertValidScalar(Object value) {
+  if (value is num || value is String || value is bool || value == null) {
+    return;
+  }
+
+  throw ArgumentError.value(value, 'value', 'Not a valid scalar type!');
+}
+
+/// Given [value], tries to format it into a plain string recognizable by YAML. If
+/// it fails, it defaults to returning a double-quoted string.
+///
+/// Not all values can be formatted into a plain string. If the string contains an
+/// escape sequence, it can only be detected when in a double-quoted sequence. Plain
+/// strings may also be misinterpreted by the YAML parser (e.g. ' null').
+String _tryGetPlainString(Object value) {
   if (value is YamlNode) {
     AssertionError(
         'YamlNodes should not be passed directly into getSafeString!');
   }
 
-  if (value is Map || value is List) {
-    AssertionError('Lists and Maps should not call getSafeString directly!');
-  }
+  assertValidScalar(value);
 
   if (value is String) {
-    var result = value;
-
-    /// If it contains a dangerous character we want to wrap the result with single
-    /// quotes
+    /// If it contains a dangerous character we want to wrap the result with double
+    /// quotes because the double quoted style allows for arbitrary strings with "\"
+    /// escape sequences.
+    ///
+    /// See 7.3.1 Double-Quoted Style https://yaml.org/spec/1.2/spec.html#id2787109
     if (isDangerousString(value)) {
-      /// But we need to escape the characters if they contain a single quote.
-      if (value.contains('\'')) {
-        result = value.replaceAll('\'', '\'\'');
-      }
-
-      return '\'$result\'';
+      return _getDoubleQuotedString(value);
     }
 
-    return result;
+    return value;
   }
 
   return value.toString();
 }
 
-/// Returns [value] with the necessary formatting applied in a block context.
+/// Checks if [string] has unprintable characters according to [unprintableCharCodes].
+bool hasUnprintableCharacters(String string) {
+  final codeUnits = string.codeUnits;
+
+  for (var key in unprintableCharCodes.keys) {
+    if (codeUnits.contains(key)) return true;
+  }
+
+  return false;
+}
+
+/// Generates a YAML-safe double-quoted string based on [string], escaping the
+/// list of characters as defined by the YAML 1.2 spec.
+///
+/// See 5.7 Escaped Characters https://yaml.org/spec/1.2/spec.html#id2776092
+String _getDoubleQuotedString(String string) {
+  final buffer = StringBuffer();
+  for (var codeUnit in string.codeUnits) {
+    if (doubleQuoteEscapeChars[codeUnit] != null) {
+      buffer.write(doubleQuoteEscapeChars[codeUnit]);
+    } else {
+      buffer.writeCharCode(codeUnit);
+    }
+  }
+
+  return '"$buffer"';
+}
+
+/// Generates a YAML-safe single-quoted string. Automatically escapes single-quotes.
+///
+/// It is important that we ensure that [string] is free of unprintable characters
+/// by calling [assertValidScalar] before invoking this function.
+String _getSingleQuotedString(String string) {
+  final result = string.replaceAll('\'', '\'\'');
+  return '\'$result\'';
+}
+
+/// Generates a YAML-safe folded string.
+///
+/// It is important that we ensure that [string] is free of unprintable characters
+/// by calling [assertValidScalar] before invoking this function.
+String _getFoldedString(String string, int indentation) {
+  var result = '>\n';
+  result += ' ' * indentation;
+  return result + _tryGetPlainString(string);
+}
+
+/// Generates a YAML-safe literal string.
+///
+/// It is important that we ensure that [string] is free of unprintable characters
+/// by calling [assertValidScalar] before invoking this function.
+String _getLiteralString(String string, int indentation) {
+  final plainString = _tryGetPlainString(string);
+  final result = '|\n$plainString';
+  return result.replaceAll('\n', '\n' + ' ' * indentation);
+}
+
+/// Returns [value] with the necessary formatting applied in a flow context
+/// if possible.
 ///
 /// If [value] is a [YamlScalar], we try to respect its [style] parameter where
 /// possible. Certain cases make this impossible (e.g. a plain string scalar that
-/// starts with '>'), in which case we will produce [value] with default styling options.
+/// starts with '>'), in which case we will produce [value] with default styling
+/// options.
 String getFlowScalar(Object value) {
-  if (value is Map || value is List) {
-    AssertionError('Only scalars can be passed into getFlowScalar');
-  }
-
   if (value is YamlScalar) {
-    if (value.style == ScalarStyle.DOUBLE_QUOTED) {
-      return '"${value.value.toString()}"';
-    } else if (value.style == ScalarStyle.SINGLE_QUOTED) {
-      return '\'${value.value.toString()}\'';
+    assertValidScalar(value.value);
+
+    if (value.value is String) {
+      if (hasUnprintableCharacters(value.value) ||
+          value.style == ScalarStyle.DOUBLE_QUOTED) {
+        return _getDoubleQuotedString(value.value);
+      }
+
+      if (value.style == ScalarStyle.SINGLE_QUOTED) {
+        return _getSingleQuotedString(value.value);
+      }
     }
 
-    return getSafeString(value.value);
+    return _tryGetPlainString(value.value);
   }
 
-  return getSafeString(value);
+  assertValidScalar(value);
+  return _tryGetPlainString(value);
 }
 
-/// Returns [value] with the necessary formatting applied in a block context.
+/// Returns [value] with the necessary formatting applied in a block context
+/// if possible.
 ///
-/// This only matters for [YamlScalar]s if they contain [ScalarStyle.FOLDED] or
-/// [ScalarStyle.LITERAL] styling.
+/// If [value] is a [YamlScalar], we try to respect its [style] parameter where
+/// possible. Certain cases make this impossible (e.g. a folded string scalar
+/// 'null'), in which case we will produce [value] with default styling
+/// options.
 String getBlockScalar(Object value, int indentation,
     [int additionalIndentation = 2]) {
-  if (value is Map || value is List) {
-    AssertionError('Only scalars can be passed into getBlockScalar');
-  }
-
   if (value is YamlScalar) {
-    var result = '';
+    assertValidScalar(value.value);
 
-    if (value.style == ScalarStyle.FOLDED) {
-      result += '>\n';
-      result += ' ' * (indentation + additionalIndentation);
-      return result + getSafeString(value.value);
-    } else if (value.style == ScalarStyle.LITERAL) {
-      result += '|\n';
-      result += ' ' * (indentation + additionalIndentation);
-      return result + getSafeString(value.value);
+    if (value.value is String) {
+      if (hasUnprintableCharacters(value.value)) {
+        return _getDoubleQuotedString(value.value);
+      }
+
+      if (value.style == ScalarStyle.SINGLE_QUOTED) {
+        return _getSingleQuotedString(value.value);
+      }
+
+      if (value.style == ScalarStyle.FOLDED) {
+        return _getFoldedString(
+            value.value, indentation + additionalIndentation);
+      }
+      if (value.style == ScalarStyle.LITERAL) {
+        return _getLiteralString(
+            value.value, indentation + additionalIndentation);
+      }
     }
+
+    return _tryGetPlainString(value.value);
   }
+
+  assertValidScalar(value);
 
   /// The remainder of the possibilities are similar to how [getFlowScalar]
   /// treats [value].
@@ -315,25 +400,32 @@ SourceSpan shellSpan(Object sourceUrl) {
   return SourceSpanBase(shellSourceLocation, shellSourceLocation, '');
 }
 
-/// List of escape characters.
+/// List of unprintable characters.
 ///
-/// See https://yaml.org/spec/1.2/spec.html#id2776092
-const List<int> yamlEscapeSequences = [
-  0, //  Escaped ASCII null (#x0) character.
-  7, //  Escaped ASCII bell (#x7) character.
-  8, //  Escaped ASCII backspace (#x8) character.
-  9, //  Escaped ASCII horizontal tab (#x9) character. Printable
-  10, //  Escaped ASCII line feed (#xA) character. Line Break.
-  11, // 	Escaped ASCII vertical tab (#xB) character.
-  12, //  Escaped ASCII form feed (#xC) character.
-  13, //  Escaped ASCII carriage return (#xD) character. Line Break.
-  27, //  Escaped ASCII escape (#x1B) character.
-  32, //  Escaped ASCII space (#x20) character. Printable
-  34, //  Escaped ASCII double quote (#x22).
-  47, //  Escaped ASCII slash (#x2F), for JSON compatibility.
-  72, //  Escaped ASCII back slash (#x5C).
-  133, //  Escaped Unicode next line (#x85) character.
-  160, //  Escaped Unicode non-breaking space (#xA0) character.
-  8232, //  Escaped Unicode line separator (#x2028) character.
-  8233, //  Escaped Unicode paragraph separator (#x2029) character.
-];
+/// See 5.7 Escape Characters https://yaml.org/spec/1.2/spec.html#id2776092
+final Map<int, String> unprintableCharCodes = {
+  0: '\\0', //  Escaped ASCII null (#x0) character.
+  7: '\\a', //  Escaped ASCII bell (#x7) character.
+  8: '\\b', //  Escaped ASCII backspace (#x8) character.
+  11: '\\v', // 	Escaped ASCII vertical tab (#xB) character.
+  12: '\\f', //  Escaped ASCII form feed (#xC) character.
+  13: '\\r', //  Escaped ASCII carriage return (#xD) character. Line Break.
+  27: '\\e', //  Escaped ASCII escape (#x1B) character.
+  133: '\\N', //  Escaped Unicode next line (#x85) character.
+  160: '\\_', //  Escaped Unicode non-breaking space (#xA0) character.
+  8232: '\\L', //  Escaped Unicode line separator (#x2028) character.
+  8233: '\\P', //  Escaped Unicode paragraph separator (#x2029) character.
+};
+
+/// List of escape characters. In particular, \x32 is not included because it
+/// can be processed normally.
+///
+/// See 5.7 Escape Characters https://yaml.org/spec/1.2/spec.html#id2776092
+final Map<int, String> doubleQuoteEscapeChars = {
+  ...unprintableCharCodes,
+  9: '\\t', //  Escaped ASCII horizontal tab (#x9) character. Printable
+  10: '\\n', //  Escaped ASCII line feed (#xA) character. Line Break.
+  34: '\\"', //  Escaped ASCII double quote (#x22).
+  47: '\\/', //  Escaped ASCII slash (#x2F), for JSON compatibility.
+  72: '\\\\', //  Escaped ASCII back slash (#x5C).
+};

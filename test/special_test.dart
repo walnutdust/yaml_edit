@@ -20,7 +20,7 @@ true: true
 ~: tilde
 false: false
 No: no
-true: 'true'
+true: "true"
 '''));
 
     expectYamlBuilderValue(

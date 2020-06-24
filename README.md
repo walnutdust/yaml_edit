@@ -45,7 +45,4 @@ doc.assign([0], 'test'); // Error in reparsing because *SS is now undefined.
 ```
 
 2. Users are not allowed to define tags in the modifications.
-3. Supports only ASCII strings for now.
-4. If strings contain an escaped character, they can only be interpreted in
-   the double-quoted style. Possible escaping approach - convert to code units, and replace?
-5. Map keys will always be added in the flow style.
+3. Map keys will always be added in the flow style.

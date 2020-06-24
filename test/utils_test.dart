@@ -50,6 +50,16 @@ c:
     e: 5'''), equals(4));
     });
 
+    test('detects the indentation used in nested map in list with complex keys',
+        () {
+      expect(detectIndentation('''
+- 1
+- 2
+- 
+    ? d
+    : 4'''), equals(4));
+    });
+
     test('detects the indentation used in nested list in map', () {
       expect(detectIndentation('''
 a: 1
@@ -71,33 +81,23 @@ c:
         expectYamlBuilderValue(doc, {'YAML': 'hi'});
       });
 
-      test('automatically escapes quotes', () {
-        final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
-        doc.assign(['YAML'], "YAML: YAML Ain't Markup Language");
-
-        expect(doc.toString(),
-            equals('{YAML: \'YAML: YAML Ain\'\'t Markup Language\'}'));
-        expectYamlBuilderValue(
-            doc, {'YAML': "YAML: YAML Ain't Markup Language"});
-      });
-
       test('prevents block scalars in flow map', () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
         doc.assign(
-            ['YAML'], wrapAsYamlNode('hi', scalarStyle: ScalarStyle.FOLDED));
+            ['YAML'], wrapAsYamlNode('test', scalarStyle: ScalarStyle.FOLDED));
 
-        expect(doc.toString(), equals('{YAML: hi}'));
-        expectYamlBuilderValue(doc, {'YAML': 'hi'});
+        expect(doc.toString(), equals('{YAML: test}'));
+        expectYamlBuilderValue(doc, {'YAML': 'test'});
       });
 
-      test('wraps string in single-quotes if it contains dangerous characters',
+      test('wraps string in double-quotes if it contains dangerous characters',
           () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
         doc.assign(
-            ['YAML'], wrapAsYamlNode('> hi', scalarStyle: ScalarStyle.PLAIN));
+            ['YAML'], wrapAsYamlNode('> test', scalarStyle: ScalarStyle.PLAIN));
 
-        expect(doc.toString(), equals('{YAML: \'> hi\'}'));
-        expectYamlBuilderValue(doc, {'YAML': '> hi'});
+        expect(doc.toString(), equals('{YAML: "> test"}'));
+        expectYamlBuilderValue(doc, {'YAML': '> test'});
       });
 
       test('list in map', () {
@@ -251,6 +251,13 @@ strings:
             'double-quoted string',
           ]
         ]);
+      });
+
+      test('wraps non-printable strings in double-quotes', () {
+        final doc = YamlEditor('[0]');
+        doc.assign([0], '\x00');
+        expect(doc.toString(), equals('["\\0"]'));
+        expectYamlBuilderValue(doc, ['\x00']);
       });
     });
   });
