@@ -124,6 +124,15 @@ class TestCase {
       case YamlModificationMethod.appendTo:
         yamlBuilder.appendToList(mod.path, mod.value);
         return;
+      case YamlModificationMethod.prependTo:
+        yamlBuilder.prependToList(mod.path, mod.value);
+        return;
+      case YamlModificationMethod.insert:
+        yamlBuilder.insertIntoList(mod.path, mod.index, mod.value);
+        return;
+      case YamlModificationMethod.splice:
+        yamlBuilder.spliceList(mod.path, mod.index, mod.deleteCount, mod.value);
+        return;
     }
   }
 
@@ -201,18 +210,31 @@ dynamic getValueFromYamlNode(YamlNode node) {
 List<YamlModification> parseModifications(List<dynamic> modifications) {
   return modifications.map((mod) {
     var value;
-    var keyOrIndex;
+    var index;
+    var deleteCount;
     final method = getModificationMethod((mod[0] as String));
 
     final path = mod[1] as List;
 
-    if (method == YamlModificationMethod.appendTo) {
+    if (method == YamlModificationMethod.appendTo ||
+        method == YamlModificationMethod.assign ||
+        method == YamlModificationMethod.prependTo) {
       value = mod[2];
-    } else if (method == YamlModificationMethod.assign) {
-      value = mod[2];
+    } else if (method == YamlModificationMethod.insert) {
+      index = mod[2];
+      value = mod[3];
+    } else if (method == YamlModificationMethod.splice) {
+      index = mod[2];
+      deleteCount = mod[3];
+
+      if (mod[4] is! List) {
+        throw ArgumentError('Invalid array ${mod[4]} used in splice');
+      }
+
+      value = mod[4];
     }
 
-    return YamlModification(method, path, keyOrIndex, value);
+    return YamlModification(method, path, index, value, deleteCount);
   }).toList();
 }
 
@@ -226,6 +248,14 @@ YamlModificationMethod getModificationMethod(String method) {
     case 'append':
     case 'appendTo':
       return YamlModificationMethod.appendTo;
+    case 'prepend':
+    case 'prependTo':
+      return YamlModificationMethod.prependTo;
+    case 'insert':
+    case 'insertIn':
+      return YamlModificationMethod.insert;
+    case 'splice':
+      return YamlModificationMethod.splice;
     default:
       throw Exception('$method not recognized!');
   }
@@ -235,15 +265,24 @@ YamlModificationMethod getModificationMethod(String method) {
 class YamlModification {
   final YamlModificationMethod method;
   final List<dynamic> path;
-  final dynamic keyOrIndex;
+  final int index;
   final dynamic value;
+  final int deleteCount;
 
-  YamlModification(this.method, this.path, this.keyOrIndex, this.value);
+  YamlModification(
+      this.method, this.path, this.index, this.value, this.deleteCount);
 
   @override
   String toString() =>
-      'method: $method, path: $path, keyOrIndex: $keyOrIndex, value: $value';
+      'method: $method, path: $path, index: $index, value: $value, deleteCount: $deleteCount';
 }
 
 /// Enum to hold the possible modification methods.
-enum YamlModificationMethod { appendTo, assign, remove }
+enum YamlModificationMethod {
+  appendTo,
+  assign,
+  remove,
+  prependTo,
+  insert,
+  splice
+}
