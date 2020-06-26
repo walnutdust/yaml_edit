@@ -454,5 +454,3 @@ $expectedTree''');
     }
   }
 }
-
-/// TODO: if node at path is block context and folded/literal, update the content

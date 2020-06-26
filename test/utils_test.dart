@@ -276,11 +276,53 @@ strings:
         expect(doc.toString(), equals('>\n  test\n\n  test'));
       });
 
+      test('rewrites folded strings properly', () {
+        final doc = YamlEditor('''
+- >
+    folded string
+''');
+        doc.assign(
+            [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
+        expect(doc.toString(), equals('''
+- >
+    test
+
+    test
+'''));
+      });
+
+//       test('rewrites folded strings properly (1)', () {
+//         final doc = YamlEditor('''
+// - >
+//     folded string''');
+//         doc.assign(
+//             [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
+//         expect(doc.toString(), equals('''
+// - >
+//     test
+
+//     test'''));
+//       });
+
       test('generates literal strings properly', () {
         final doc = YamlEditor('');
         doc.assign(
             [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
         expect(doc.toString(), equals('|\n  test\n  test'));
+      });
+
+      test('rewrites literal strings properly', () {
+        final doc = YamlEditor('''
+- |
+    literal string
+''');
+        doc.assign([0],
+            wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
+        expect(doc.toString(), equals('''
+- |
+    test
+    test
+'''));
       });
     });
   });
