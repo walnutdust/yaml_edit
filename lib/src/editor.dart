@@ -163,8 +163,9 @@ class YamlEditor {
     ArgumentError.checkNotNull(path, 'path');
 
     if (path.isEmpty) {
+      final start = _contents.span.start.offset;
       final end = getContentSensitiveEnd(_contents);
-      final edit = SourceEdit(0, end, getBlockString(value));
+      final edit = SourceEdit(start, end - start, getBlockString(value));
 
       _performEdit(edit, path, wrapAsYamlNode(value));
       return;

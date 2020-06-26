@@ -254,5 +254,5 @@ final Map<int, String> doubleQuoteEscapeChars = {
   10: '\\n', //  Escaped ASCII line feed (#xA) character. Line Break.
   34: '\\"', //  Escaped ASCII double quote (#x22).
   47: '\\/', //  Escaped ASCII slash (#x2F), for JSON compatibility.
-  72: '\\\\', //  Escaped ASCII back slash (#x5C).
+  92: '\\\\', //  Escaped ASCII back slash (#x5C).
 };

@@ -4,3 +4,16 @@ c: 'hello world'
 a: ' space around me '
 c: 'hello world'
 b: " also spaced "
+
+---
+a: ' space around me '
+c: 'hello world'
+b: " also spaced "
+d: " "
+
+---
+a: ' space around me '
+c: 'hello world'
+b: " also spaced "
+d: " "
+"\ne": with newline

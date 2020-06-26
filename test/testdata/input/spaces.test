@@ -4,3 +4,5 @@ a: ' space around me '
 c: 'hello world'
 ---
 - [assign, ['b'], ' also spaced ']
+- [assign, ['d'], ' ']
+- [assign, ["\ne"], with newline]

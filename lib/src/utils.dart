@@ -8,7 +8,12 @@ import 'package:yaml/yaml.dart';
 /// [string].
 bool isDangerousString(String string) {
   try {
-    return loadYamlNode(string).value != string;
+    if (loadYamlNode(string).value != string) {
+      return true;
+    }
+
+    /// [string] should also not contain the `]` and `}` indicator characters.
+    return string.contains(RegExp(r']|}'));
   } catch (YamlException) {
     return true;
   }
