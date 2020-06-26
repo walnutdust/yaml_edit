@@ -181,3 +181,23 @@ bool isFlowYamlCollectionNode(Object value) {
 
   return false;
 }
+
+/// Determines the index where [newKey] will be inserted if the keys in [map] are in
+/// alphabetical order when converted to strings.
+///
+/// Returns the length of [map] if the keys in [map] are not in alphabetical order.
+int getMapInsertionIndex(YamlMap map, Object newKey) {
+  final keys = map.nodes.keys.map((k) => k.toString()).toList();
+
+  for (var i = 1; i < keys.length; i++) {
+    if (keys[i].compareTo(keys[i - 1]) < 0) {
+      return map.length;
+    }
+  }
+
+  final insertionIndex = keys.indexWhere((key) => key.compareTo(newKey) > 0);
+
+  if (insertionIndex != -1) return insertionIndex;
+
+  return map.length;
+}

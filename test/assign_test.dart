@@ -297,6 +297,22 @@ c: 3
         expect(doc.toString(), equals('{YAML: test}'));
         expectYamlBuilderValue(doc, {'YAML': 'test'});
       });
+
+      test('with spacing', () {
+        final doc = YamlEditor(
+            "{ YAML:  YAML Ain't Markup Language , XML: Extensible Markup Language , HTML: Hypertext Markup Language }");
+        doc.assign(['XML'], 'XML Markup Language');
+
+        expect(
+            doc.toString(),
+            equals(
+                "{ YAML:  YAML Ain't Markup Language , XML: XML Markup Language, HTML: Hypertext Markup Language }"));
+        expectYamlBuilderValue(doc, {
+          'YAML': "YAML Ain't Markup Language",
+          'XML': 'XML Markup Language',
+          'HTML': 'Hypertext Markup Language'
+        });
+      });
     });
 
     group('block list', () {
@@ -447,6 +463,7 @@ c: 3
           [1, 2, 3]
         ]);
       });
+
       test('with spacing (1)', () {
         final doc = YamlEditor('[ 0 , 1 , 2 , 3 ]');
         doc.assign([1], 4);
@@ -473,26 +490,10 @@ c: 3
         expect(
             doc.toString(),
             equals(
-                "{YAML: YAML Ain't Markup Language, XML: Extensible Markup Language}"));
+                "{XML: Extensible Markup Language, YAML: YAML Ain't Markup Language}"));
         expectYamlBuilderValue(doc, {
+          'XML': 'Extensible Markup Language',
           'YAML': "YAML Ain't Markup Language",
-          'XML': 'Extensible Markup Language'
-        });
-      });
-
-      test('with spacing', () {
-        final doc = YamlEditor(
-            "{ YAML:  YAML Ain't Markup Language , XML: Extensible Markup Language , HTML: Hypertext Markup Language }");
-        doc.assign(['XML'], 'XML Markup Language');
-
-        expect(
-            doc.toString(),
-            equals(
-                "{ YAML:  YAML Ain't Markup Language , XML: XML Markup Language, HTML: Hypertext Markup Language }"));
-        expectYamlBuilderValue(doc, {
-          'YAML': "YAML Ain't Markup Language",
-          'XML': 'XML Markup Language',
-          'HTML': 'Hypertext Markup Language'
         });
       });
     });

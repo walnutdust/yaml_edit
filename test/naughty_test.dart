@@ -17,7 +17,6 @@ void main() async {
 
   final rawStrings = stringsFile.readAsStringSync();
   final strings = jsonDecode(rawStrings);
-  print(strings.length);
 
   for (var string in strings) {
     test('expect string $string', () {

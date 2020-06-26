@@ -54,15 +54,25 @@ SourceEdit _addToBlockMap(
   var formattedValue = ' ' * getMapIndentation(yaml, map) + '$keyString: ';
   var offset = map.span.end.offset;
 
-  // Adjusts offset to after the trailing newline of the last entry, if it exists
-  if (map.isNotEmpty) {
-    final lastValueSpanEnd = getContentSensitiveEnd(map.nodes.values.last);
-    final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
+  final insertionIndex = getMapInsertionIndex(map, keyString);
 
-    if (nextNewLineIndex != -1) {
-      offset = nextNewLineIndex + 1;
+  if (map.isNotEmpty) {
+    // Adjusts offset to after the trailing newline of the last entry, if it exists
+    if (insertionIndex == map.length) {
+      final lastValueSpanEnd = getContentSensitiveEnd(map.nodes.values.last);
+      final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
+
+      if (nextNewLineIndex != -1) {
+        offset = nextNewLineIndex + 1;
+      } else {
+        formattedValue = '\n' + formattedValue;
+      }
     } else {
-      formattedValue = '\n' + formattedValue;
+      final keyAtIndex = (map.nodes.keys.toList()[insertionIndex] as YamlNode);
+      final keySpanStart = keyAtIndex.span.start.offset;
+      final prevNewLineIndex = yaml.lastIndexOf('\n', keySpanStart);
+
+      offset = prevNewLineIndex + 1;
     }
   }
 
@@ -81,9 +91,18 @@ SourceEdit _addToFlowMap(
   // The -1 accounts for the closing bracket.
   if (map.isEmpty) {
     return SourceEdit(map.span.end.offset - 1, 0, '$keyString: $valueString');
-  } else {
+  }
+
+  final insertionIndex = getMapInsertionIndex(map, keyString);
+
+  if (insertionIndex == map.length) {
     return SourceEdit(map.span.end.offset - 1, 0, ', $keyString: $valueString');
   }
+
+  final insertionOffset =
+      (map.nodes.keys.toList()[insertionIndex] as YamlNode).span.start.offset;
+
+  return SourceEdit(insertionOffset, 0, '$keyString: $valueString, ');
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of replacing
