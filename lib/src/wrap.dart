@@ -26,7 +26,7 @@ YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
   /// This workaround is necessary since [yamlNodeFrom] will re-wrap [YamlNode]s,
   /// so we need to unwrap them before passing them in.
   for (var key in dummyMap.keys) {
-    updatedMap[key.value] = dummyMap[key].value;
+    updatedMap[key.value] = dummyMap[key];
   }
 
   return wrapAsYamlNode(updatedMap);

@@ -11,7 +11,7 @@ void main(List<String> args) {
   final seed = args.isEmpty ? 42 : int.tryParse(args[0]);
   final generator = Generator(seed);
 
-  final roundsOfTesting = 1;
+  final roundsOfTesting = 3;
   final modificationsPerRound = 50;
 
   for (var i = 0; i < roundsOfTesting; i++) {
@@ -192,6 +192,7 @@ $path
 Error Details:
 ${error.message}
 ''');
+        rethrow;
       }
     }
 
@@ -221,6 +222,7 @@ $path
 Error Details:
 ${error.message}
 ''');
+        rethrow;
       }
     }
 
