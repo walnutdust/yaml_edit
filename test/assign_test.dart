@@ -134,6 +134,20 @@ c: 3
         });
       });
 
+      test('nested (3)', () {
+        final doc = YamlEditor('''
+a:
+ b: 4
+''');
+        doc.assign(['a'], true);
+
+        expect(doc.toString(), equals('''
+a: true
+'''));
+
+        expectYamlBuilderValue(doc, {'a': true});
+      });
+
       test('nested scalar -> flow list', () {
         final doc = YamlEditor('''
 a: 1
@@ -298,6 +312,14 @@ c: 3
         expectYamlBuilderValue(doc, {'YAML': 'test'});
       });
 
+      test('(2)', () {
+        final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
+        doc.assign(['YAML'], 'd9]zH`FoYC/>]');
+
+        expect(doc.toString(), equals('{YAML: "d9]zH`FoYC\\/>]"}'));
+        expectYamlBuilderValue(doc, {'YAML': 'd9]zH`FoYC/>]'});
+      });
+
       test('with spacing', () {
         final doc = YamlEditor(
             "{ YAML:  YAML Ain't Markup Language , XML: Extensible Markup Language , HTML: Hypertext Markup Language }");
@@ -313,6 +335,14 @@ c: 3
           'HTML': 'Hypertext Markup Language'
         });
       });
+    });
+
+    test('empty block list to map', () {
+      final doc = YamlEditor('test: test');
+      doc.assign(['test'], []);
+
+      expect(doc.toString(), equals('test: \n  []'));
+      expectYamlBuilderValue(doc, {'test': []});
     });
 
     group('block list', () {

@@ -202,6 +202,8 @@ String getBlockString(Object value,
   final newIndentation = indentation + additionalIndentation;
 
   if (value is List) {
+    if (value.isEmpty) return ' ' * indentation + '[]';
+
     var safeValues;
 
     var children = value is YamlList ? value.nodes : value;
@@ -213,6 +215,8 @@ String getBlockString(Object value,
 
     return safeValues.join('\n');
   } else if (value is Map) {
+    if (value.isEmpty) return ' ' * indentation + '{}';
+
     var children = value is YamlMap ? value.nodes : value;
 
     return children.entries.map((entry) {

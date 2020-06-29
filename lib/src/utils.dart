@@ -12,8 +12,8 @@ bool isDangerousString(String string) {
       return true;
     }
 
-    /// [string] should also not contain the `]` and `}` indicator characters.
-    return string.contains(RegExp(r']|}'));
+    /// [string] should also not contain the `[`, `]`, `,`, `{` and `}` indicator characters.
+    return string.contains(RegExp(r'\{|\[|\]|\}|,'));
   } catch (YamlException) {
     return true;
   }

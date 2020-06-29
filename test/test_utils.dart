@@ -26,3 +26,13 @@ Matcher notEquals(dynamic expected) => isNot(equals(expected));
 
 /// A matcher for functions that throw PathError.
 Matcher throwsPathError = throwsA(isA<PathError>());
+
+/// Enum to hold the possible modification methods.
+enum YamlModificationMethod {
+  appendTo,
+  assign,
+  remove,
+  prependTo,
+  insert,
+  splice
+}

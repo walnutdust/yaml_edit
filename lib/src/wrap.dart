@@ -81,6 +81,9 @@ class YamlScalarWrap implements YamlScalar {
         _style = style {
     ArgumentError.checkNotNull(style, 'scalarStyle');
   }
+
+  @override
+  String toString() => value.toString();
 }
 
 /// Internal class that allows us to define a constructor on [YamlMap]
@@ -120,7 +123,7 @@ class YamlMapWrap
   YamlMapWrap._(this.nodes,
       {CollectionStyle style = CollectionStyle.ANY, Object sourceUrl})
       : span = shellSpan(sourceUrl),
-        _style = style;
+        _style = nodes.isEmpty ? CollectionStyle.FLOW : style;
 
   @override
   dynamic operator [](Object key) => nodes[key]?.value;
@@ -168,7 +171,7 @@ class YamlListWrap with collection.ListMixin implements YamlList {
   YamlListWrap._(this.nodes,
       {CollectionStyle style = CollectionStyle.ANY, Object sourceUrl})
       : span = shellSpan(sourceUrl),
-        _style = style;
+        _style = nodes.isEmpty ? CollectionStyle.FLOW : style;
 
   @override
   dynamic operator [](int index) => nodes[index].value;
@@ -269,7 +272,8 @@ YamlMapWrap _ensureMapContextStyling(YamlMapWrap map,
 
   final updatedMap = deepEqualsMap();
   for (var key in map.nodes.keys) {
-    updatedMap[key.value] = ensureNodeContextStyling(map.nodes[key]);
+    updatedMap[key.value] =
+        ensureNodeContextStyling(map.nodes[key], flowContext);
   }
 
   return wrapAsYamlNode(updatedMap);

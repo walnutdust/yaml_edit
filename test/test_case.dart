@@ -4,6 +4,8 @@ import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
+import 'test_utils.dart';
+
 /// Interface for creating golden Test cases
 class TestCases {
   final List<TestCase> testCases;
@@ -275,14 +277,4 @@ class YamlModification {
   @override
   String toString() =>
       'method: $method, path: $path, index: $index, value: $value, deleteCount: $deleteCount';
-}
-
-/// Enum to hold the possible modification methods.
-enum YamlModificationMethod {
-  appendTo,
-  assign,
-  remove,
-  prependTo,
-  insert,
-  splice
 }

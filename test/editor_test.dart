@@ -14,7 +14,7 @@ void main() {
       yamlEditor.assign(['YAML'], "YAML Ain't Markup Language");
 
       expect(
-          yamlEditor.edits, [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
+          yamlEditor.edits, [SourceEdit(5, 5, " YAML Ain't Markup Language")]);
     });
 
     test('after multiple changes', () {
@@ -24,7 +24,7 @@ void main() {
       yamlEditor.remove(['YAML']);
 
       expect(yamlEditor.edits, [
-        SourceEdit(6, 4, "YAML Ain't Markup Language"),
+        SourceEdit(5, 5, " YAML Ain't Markup Language"),
         SourceEdit(0, 0, 'XML: Extensible Markup Language\n'),
         SourceEdit(31, 33, '')
       ]);
@@ -36,14 +36,14 @@ void main() {
 
       final firstEdits = yamlEditor.edits;
 
-      expect(firstEdits, [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
+      expect(firstEdits, [SourceEdit(5, 5, " YAML Ain't Markup Language")]);
 
       yamlEditor.assign(['XML'], 'Extensible Markup Language');
       yamlEditor.remove(['YAML']);
 
-      expect(firstEdits, [SourceEdit(6, 4, "YAML Ain't Markup Language")]);
+      expect(firstEdits, [SourceEdit(5, 5, " YAML Ain't Markup Language")]);
       expect(yamlEditor.edits, [
-        SourceEdit(6, 4, "YAML Ain't Markup Language"),
+        SourceEdit(5, 5, " YAML Ain't Markup Language"),
         SourceEdit(0, 0, 'XML: Extensible Markup Language\n'),
         SourceEdit(31, 33, '')
       ]);

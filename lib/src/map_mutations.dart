@@ -120,10 +120,10 @@ SourceEdit _replaceInBlockMap(
   }
 
   /// +2 accounts for the colon
-  final start = keyNode.span.end.offset + 2;
+  final start = keyNode.span.end.offset + 1;
   final end = getContentSensitiveEnd(value);
 
-  return SourceEdit(start, end - start, valueString);
+  return SourceEdit(start, end - start, ' ' + valueString);
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of replacing

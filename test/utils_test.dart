@@ -324,6 +324,23 @@ strings:
     test
 '''));
       });
+
+      test('prevents literal strings in flow maps, even if nested', () {
+        final doc = YamlEditor('''
+{1: 1}
+''');
+        doc.assign([
+          1
+        ], [
+          wrapAsYamlNode('d9]zH`FoYC/>]', scalarStyle: ScalarStyle.LITERAL)
+        ]);
+
+        expect(doc.toString(), equals('''
+{1: ["d9]zH`FoYC\\/>]"]}
+'''));
+        expect((doc.parseAt([1, 0]) as dynamic).style,
+            equals(ScalarStyle.DOUBLE_QUOTED));
+      });
     });
   });
 

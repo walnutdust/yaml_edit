@@ -397,7 +397,6 @@ class YamlEditor {
 
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
-
     final actualTree = loadYamlNode(_yaml);
 
     if (!deepEquals(actualTree, expectedTree)) {
