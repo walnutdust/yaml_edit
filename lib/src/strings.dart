@@ -136,12 +136,16 @@ String getBlockScalar(Object value, int indentation) {
         return _getSingleQuotedString(value.value);
       }
 
-      if (value.style == ScalarStyle.FOLDED) {
-        return _getFoldedString(value.value, indentation);
-      }
+      // Strings with only white spaces will cause a misparsing
+      if (value.value.trimLeft().length == value.value.length &&
+          value.value.length != 0) {
+        if (value.style == ScalarStyle.FOLDED) {
+          return _getFoldedString(value.value, indentation);
+        }
 
-      if (value.style == ScalarStyle.LITERAL) {
-        return _getLiteralString(value.value, indentation);
+        if (value.style == ScalarStyle.LITERAL) {
+          return _getLiteralString(value.value, indentation);
+        }
       }
     }
 

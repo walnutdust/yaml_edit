@@ -33,6 +33,7 @@ dev_dependencies:
 ''');
 
     for (var i = 0; i < modificationsPerRound; i++) {
+      print(i);
       generator.performNextModification(editor);
     }
 
@@ -106,13 +107,12 @@ class Generator {
     return wrapAsYamlNode(list, collectionStyle: nextCollectionStyle());
   }
 
-  // TODO(walnut): collections as keys.
   YamlMap nextYamlMap() {
     final length = nextInt(9);
     final nodes = {};
 
     for (var i = 0; i < length; i++) {
-      nodes[nextScalar()] = nextYamlScalar();
+      nodes[nextYamlNode()] = nextYamlScalar();
     }
 
     return wrapAsYamlNode(nodes, collectionStyle: nextCollectionStyle());
@@ -180,7 +180,7 @@ class Generator {
             break;
         }
         return;
-      } on AssertionError {
+      } catch (error) {
         print('''
 Failed to call $method on:
 $editor
@@ -188,8 +188,10 @@ with the following arguments:
 $args
 and path:
 $path
+
+Error Details:
+${error.message}
 ''');
-        rethrow;
       }
     }
 
@@ -207,7 +209,7 @@ $path
       try {
         editor.assign(path, value);
         return;
-      } on AssertionError {
+      } catch (error) {
         print('''
 Failed to call assign on:
 $editor
@@ -215,8 +217,10 @@ with the following arguments:
 $value
 and path:
 $path
+
+Error Details:
+${error.message}
 ''');
-        rethrow;
       }
     }
 

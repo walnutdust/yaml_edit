@@ -232,7 +232,9 @@ YamlScalarWrap _ensureScalarContextStyling(YamlScalarWrap node,
   }
 
   if (node.value is String &&
-      (node.style == ScalarStyle.FOLDED || node.style == ScalarStyle.LITERAL)) {
+      (node.style == ScalarStyle.FOLDED || node.style == ScalarStyle.LITERAL) &&
+      node.value.trimLeft().length == node.value.length &&
+      node.value.length != 0) {
     return wrapAsYamlNode(node.value + '\n');
   }
 

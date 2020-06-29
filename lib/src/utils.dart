@@ -98,7 +98,9 @@ int getMapIndentation(String yaml, YamlMap map) {
   }
 
   if (lastNewLine == -1) return lastQuestionMark;
-  return lastQuestionMark - lastNewLine - 1;
+  if (lastQuestionMark > lastNewLine) return lastQuestionMark - lastNewLine - 1;
+
+  return lastSpanOffset - lastNewLine - 1;
 }
 
 /// Gets the indentation level of the list. This is 0 if it is a flow list,

@@ -341,6 +341,44 @@ strings:
         expect((doc.parseAt([1, 0]) as dynamic).style,
             equals(ScalarStyle.DOUBLE_QUOTED));
       });
+
+      test('prevents literal empty strings', () {
+        final doc = YamlEditor('''
+a:
+  c: 1
+''');
+        doc.assign([
+          'a'
+        ], {
+          'f': wrapAsYamlNode('', scalarStyle: ScalarStyle.LITERAL),
+          'g': 1
+        });
+
+        expect(doc.toString(), equals('''
+a: 
+  f: ""
+  g: 1
+'''));
+      });
+
+      test('prevents literal strings with leading spaces', () {
+        final doc = YamlEditor('''
+a:
+  c: 1
+''');
+        doc.assign([
+          'a'
+        ], {
+          'f': wrapAsYamlNode(' a', scalarStyle: ScalarStyle.LITERAL),
+          'g': 1
+        });
+
+        expect(doc.toString(), equals('''
+a: 
+  f: " a"
+  g: 1
+'''));
+      });
     });
   });
 

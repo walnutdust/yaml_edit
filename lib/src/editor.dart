@@ -398,12 +398,13 @@ class YamlEditor {
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
     final actualTree = loadYamlNode(_yaml);
-
     if (!deepEquals(actualTree, expectedTree)) {
       throw AssertionError('''
 Modification did not result in expected result! 
+
 Obtained: 
 $actualTree
+
 Expected: 
 $expectedTree''');
     }
