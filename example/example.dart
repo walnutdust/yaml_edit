@@ -3,12 +3,15 @@ import 'package:yaml/yaml.dart';
 
 void main() {
   final doc = YamlEditor('''
-a: 
-  - - 1
-    - 2
-  - null
+a: [0]
 ''');
-  doc.assign(['a', 0], false);
+  doc.spliceList(
+      ['a'],
+      0,
+      1,
+      [
+        {'test': wrapAsYamlNode('a', scalarStyle: ScalarStyle.FOLDED)}
+      ]);
 
   print(doc);
 }

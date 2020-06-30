@@ -12,7 +12,7 @@ void main(List<String> args) {
   final generator = Generator(seed);
 
   final roundsOfTesting = 5;
-  final modificationsPerRound = 50;
+  final modificationsPerRound = 100;
 
   for (var i = 0; i < roundsOfTesting; i++) {
     final editor = YamlEditor('''

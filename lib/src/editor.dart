@@ -246,7 +246,7 @@ class YamlEditor {
         list, (nodes) => nodes.insert(index, wrapAsYamlNode(value)));
 
     expectedList = ensureNodeContextStyling(
-        expectedList, expectedList.style == CollectionStyle.FLOW);
+        expectedList, list.style == CollectionStyle.FLOW);
     _performEdit(edit, path, expectedList);
   }
 
