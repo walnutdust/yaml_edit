@@ -162,6 +162,17 @@ b:
       doc.remove(['b', 'd']);
       expect(doc.toString(), equals('{a: 1, b: { e: 5}, c: 3}'));
     });
+
+    test('nested flow map (2)', () {
+      final doc = YamlEditor('{a: {{[1] : 2}: 3, b: 2}}');
+      doc.remove([
+        'a',
+        {
+          [1]: 2
+        }
+      ]);
+      expect(doc.toString(), equals('{a: { b: 2}}'));
+    });
   });
 
   group('block list', () {

@@ -3,11 +3,15 @@ import 'package:yaml/yaml.dart';
 
 void main() {
   final doc = YamlEditor('''
-a:
-  - false
+{a: {{[1] : 2}: 3, b: 2}}
 ''');
-  doc.prependToList(
-      ['a'], wrapAsYamlNode([1234], collectionStyle: CollectionStyle.FLOW));
+
+  doc.remove([
+    'a',
+    {
+      [1]: 2
+    }
+  ]);
 
   print(doc);
 }

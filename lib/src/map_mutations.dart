@@ -29,7 +29,7 @@ SourceEdit removeInMap(String yaml, YamlMap map, Object key) {
   if (!containsKey(map, key)) return null;
 
   final keyNode = getKeyNode(map, key);
-  final valueNode = map.nodes[key];
+  final valueNode = map.nodes[keyNode];
 
   if (map.style == CollectionStyle.FLOW) {
     return _removeFromFlowMap(yaml, map, keyNode, valueNode);
@@ -163,7 +163,7 @@ SourceEdit _removeFromFlowMap(
   var end = valueNode.span.end.offset;
 
   if (deepEquals(keyNode, map.keys.first)) {
-    start = yaml.lastIndexOf('{', start) + 1;
+    start = yaml.lastIndexOf('{', start - 1) + 1;
 
     if (deepEquals(keyNode, map.keys.last)) {
       end = yaml.indexOf('}', end);
@@ -171,7 +171,7 @@ SourceEdit _removeFromFlowMap(
       end = yaml.indexOf(',', end) + 1;
     }
   } else {
-    start = yaml.lastIndexOf(',', start);
+    start = yaml.lastIndexOf(',', start - 1);
   }
 
   return SourceEdit(start, end - start, '');

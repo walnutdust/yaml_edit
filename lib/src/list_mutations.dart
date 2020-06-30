@@ -153,7 +153,7 @@ SourceEdit _insertInFlowList(
 
   final currNode = list.nodes[index];
   final currNodeStart = currNode.span.start.offset;
-  var start = yaml.lastIndexOf(RegExp(r',|\['), currNodeStart) + 1;
+  var start = yaml.lastIndexOf(RegExp(r',|\['), currNodeStart - 1) + 1;
   if (yaml[start] == ' ') start++;
 
   return SourceEdit(start, 0, formattedValue);
@@ -195,14 +195,14 @@ SourceEdit _removeFromFlowList(
   var end = span.end.offset;
 
   if (index == 0) {
-    start = yaml.lastIndexOf('[', start) + 1;
+    start = yaml.lastIndexOf('[', start - 1) + 1;
     if (index == list.length - 1) {
       end = yaml.indexOf(']', end);
     } else {
       end = yaml.indexOf(',', end) + 1;
     }
   } else {
-    start = yaml.lastIndexOf(',', start);
+    start = yaml.lastIndexOf(',', start - 1);
   }
 
   return SourceEdit(start, end - start, '');
