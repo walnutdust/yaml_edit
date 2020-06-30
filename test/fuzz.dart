@@ -173,8 +173,8 @@ class Generator {
             editor.insertIntoList(path, args[0], args[1]);
             break;
           case YamlModificationMethod.splice:
-            args.add(nextInt(node.length - 1));
-            args.add(nextInt(node.length - 1 - args[0]));
+            args.add(nextInt(node.length + 1));
+            args.add(nextInt(node.length + 1 - args[0]));
             args.add(nextYamlList());
             editor.spliceList(path, args[0], args[1], args[2]);
             break;
