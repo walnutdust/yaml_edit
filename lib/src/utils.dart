@@ -203,3 +203,12 @@ int getMapInsertionIndex(YamlMap map, Object newKey) {
 
   return map.length;
 }
+
+/// Returns the [style] property of [target], if it is a [YamlNode]. Otherwise return null.
+Object getStyle(Object target) {
+  if (target is YamlNode) {
+    return (target as dynamic).style;
+  }
+
+  return null;
+}

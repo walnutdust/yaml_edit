@@ -189,9 +189,6 @@ String getFlowString(Object value) {
 /// Returns [value] with the necessary formatting applied in a block context.
 ///
 /// If [value] is a [YamlNode], we respect its [style] parameter.
-///
-/// We do a join('\n') rather than having it in the mapping to avoid
-/// adding additional spaces when updating rather than adding elements.
 String getBlockString(Object value,
     [int indentation = 0, int additionalIndentation = 2]) {
   if (additionalIndentation < 1) {
@@ -213,10 +210,16 @@ String getBlockString(Object value,
     var children = value is YamlList ? value.nodes : value;
 
     safeValues = children.map((child) {
-      final valueString = getBlockString(child, newIndentation);
+      var valueString = getBlockString(child, newIndentation);
+      if (isCollection(child) && !isFlowYamlCollectionNode(child)) {
+        valueString = valueString.substring(newIndentation);
+      }
+
       return ' ' * indentation + '- $valueString';
     });
 
+    /// We do a join('\n') rather than having it in the mapping to avoid
+    /// adding additional spaces when updating rather than adding elements.
     return safeValues.join('\n');
   } else if (value is Map) {
     if (value.isEmpty) return ' ' * indentation + '{}';
@@ -229,6 +232,9 @@ String getBlockString(Object value,
       final formattedValue = getBlockString(entry.value, newIndentation);
 
       return formattedKey + ': ' + formattedValue;
+
+      /// We do a join('\n') rather than having it in the mapping to avoid
+      /// adding additional spaces when updating rather than adding elements.
     }).join('\n');
   }
 

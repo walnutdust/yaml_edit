@@ -21,6 +21,9 @@ SourceEdit assignInList(
     valueString = getBlockString(newValue, indentation);
     if (isCollection(newValue)) {
       valueString = valueString.substring(indentation);
+    } else if (isCollection(currValue) &&
+        getStyle(currValue) == CollectionStyle.BLOCK) {
+      valueString += '\n' + ' ' * listIndentation;
     }
   } else {
     valueString = getFlowString(newValue);

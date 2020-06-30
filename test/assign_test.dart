@@ -148,6 +148,59 @@ a: true
         expectYamlBuilderValue(doc, {'a': true});
       });
 
+      test('nested (4)', () {
+        final doc = YamlEditor('''
+a: 1
+''');
+        doc.assign([
+          'a'
+        ], [
+          {'a': true, 'b': false}
+        ]);
+
+        expectYamlBuilderValue(doc, {
+          'a': [
+            {'a': true, 'b': false}
+          ]
+        });
+      });
+
+      test('nested (5)', () {
+        final doc = YamlEditor('''
+a: 
+  - a: 1
+    b: 2
+  - null
+''');
+        doc.assign(['a', 0], false);
+        expect(doc.toString(), equals('''
+a: 
+  - false
+  - null
+'''));
+        expectYamlBuilderValue(doc, {
+          'a': [false, null]
+        });
+      });
+
+      test('nested (6)', () {
+        final doc = YamlEditor('''
+a: 
+  - - 1
+    - 2
+  - null
+''');
+        doc.assign(['a', 0], false);
+        expect(doc.toString(), equals('''
+a: 
+  - false
+  - null
+'''));
+        expectYamlBuilderValue(doc, {
+          'a': [false, null]
+        });
+      });
+
       test('nested scalar -> flow list', () {
         final doc = YamlEditor('''
 a: 1

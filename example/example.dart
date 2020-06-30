@@ -3,13 +3,12 @@ import 'package:yaml/yaml.dart';
 
 void main() {
   final doc = YamlEditor('''
-a: 1
+a: 
+  - - 1
+    - 2
+  - null
 ''');
-  doc.assign(
-      ['a'],
-      wrapAsYamlNode(
-          'C:}DI{IdUjO:0gysArUDUR*jI}3`wGCYA7RxsNbiH(fq=@_=a5*+uFF_;o<.xX',
-          scalarStyle: ScalarStyle.LITERAL));
+  doc.assign(['a', 0], false);
 
   print(doc);
 }
