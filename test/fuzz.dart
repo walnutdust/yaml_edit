@@ -11,7 +11,7 @@ void main(List<String> args) {
   final seed = args.isEmpty ? 42 : int.tryParse(args[0]);
   final generator = Generator(seed);
 
-  final roundsOfTesting = 5;
+  final roundsOfTesting = 10;
   final modificationsPerRound = 100;
 
   for (var i = 0; i < roundsOfTesting; i++) {

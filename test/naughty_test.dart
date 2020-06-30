@@ -7,18 +7,10 @@ import 'dart:isolate';
 import 'package:test/test.dart';
 import 'package:yaml_edit/src/editor.dart';
 
+import './blns/blns.dart';
+
 void main() async {
-  final packageUri = await Isolate.resolvePackageUri(
-      Uri.parse('package:yaml_edit/yaml_edit.dart'));
-  final blnsPath = packageUri.resolve('../test/blns/blns.json').path;
-  final stringsFile = File(blnsPath);
-
-  if (!stringsFile.existsSync()) return;
-
-  final rawStrings = stringsFile.readAsStringSync();
-  final strings = jsonDecode(rawStrings);
-
-  for (var string in strings) {
+  for (var string in naughtyStrings) {
     test('expect string $string', () {
       final doc = YamlEditor('');
 
