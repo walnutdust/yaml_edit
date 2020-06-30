@@ -1,5 +1,6 @@
 import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:yaml/yaml.dart';
 
 import 'test_utils.dart';
 
@@ -74,6 +75,32 @@ void main() {
         1,
         2
       ]);
+    });
+
+    test('(4)', () {
+      final doc = YamlEditor('''
+a:
+ - b
+ - - c
+   - d
+''');
+      doc.prependToList(
+          ['a'], wrapAsYamlNode({1: 2}, collectionStyle: CollectionStyle.FLOW));
+
+      expect(doc.toString(), equals('''
+a:
+ - {1: 2}
+ - b
+ - - c
+   - d
+'''));
+      expectYamlBuilderValue(doc, {
+        'a': [
+          {1: 2},
+          'b',
+          ['c', 'd']
+        ]
+      });
     });
 
     test('with comments ', () {

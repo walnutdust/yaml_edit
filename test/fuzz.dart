@@ -4,11 +4,12 @@ import 'package:yaml/yaml.dart';
 import 'package:yaml_edit/src/wrap.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
+import 'blns/blns.dart';
 import 'test_utils.dart';
 
 /// Performs naive fuzzing on an initial YAML file based on an initial seed.
 void main(List<String> args) {
-  final seed = args.isEmpty ? 42 : int.tryParse(args[0]);
+  final seed = args.isEmpty ? 0 : int.tryParse(args[0]);
   final generator = Generator(seed);
 
   final roundsOfTesting = 10;
@@ -33,7 +34,6 @@ dev_dependencies:
 ''');
 
     for (var i = 0; i < modificationsPerRound; i++) {
-      print(i);
       generator.performNextModification(editor);
     }
 
@@ -48,6 +48,23 @@ class Generator {
   /// 2^32
   static const int maxInt = 4294967296;
 
+  static const List<String> naughtyYAMLStrings = [
+    '',
+    ' ',
+    '~',
+    'null',
+    'Null',
+    'NULL',
+    'true',
+    'True',
+    'TRUE',
+    'false',
+    'False',
+    'FALSE',
+    '[]',
+    '{}'
+  ];
+
   Generator([int seed]) : r = Random(seed ?? 42);
 
   int nextInt([int max = maxInt]) => r.nextInt(max);
@@ -59,14 +76,19 @@ class Generator {
   /// Generates a new string by individually generating characters and
   /// appending them to a buffer. Currently only generates strings from
   /// ascii 32 - 127.
-  ///
-  /// TODO(walnut): include naughty strings here? As well as null string?
   String nextString() {
+    if (nextBool()) {
+      return naughtyStrings[nextInt(naughtyStrings.length)];
+    }
+
+    if (nextBool()) {
+      return naughtyYAMLStrings[nextInt(naughtyYAMLStrings.length)];
+    }
+
     final length = nextInt(100);
     final buffer = StringBuffer();
 
     for (var i = 0; i < length; i++) {
-      // TODO(walnut): Figure out how to include the other characters
       var charCode = nextInt(95) + 32;
       buffer.writeCharCode(charCode);
     }
@@ -205,7 +227,6 @@ ${error.message}
       } else {
         path.add(nextScalar());
       }
-
       final value = nextYamlNode();
       try {
         editor.assign(path, value);

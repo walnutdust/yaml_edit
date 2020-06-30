@@ -117,8 +117,8 @@ int getListIndentation(String yaml, YamlList list) {
   }
 
   final lastSpanOffset = list.nodes.last.span.start.offset;
-  final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset);
-  final lastHyphen = yaml.lastIndexOf('-', lastSpanOffset);
+  final lastNewLine = yaml.lastIndexOf('\n', lastSpanOffset - 1);
+  final lastHyphen = yaml.lastIndexOf('-', lastSpanOffset - 1);
 
   if (lastNewLine == -1) return lastHyphen;
 
