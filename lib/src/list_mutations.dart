@@ -103,7 +103,7 @@ String _formatNewBlock(String yaml, YamlList list, Object elem) {
   final indentation =
       getListIndentation(yaml, list) + detectIndentationSetting(yaml);
   var valueString = getBlockString(elem, indentation);
-  if (isCollection(elem)) {
+  if (isCollection(elem) && !isFlowYamlCollectionNode(elem)) {
     valueString = valueString.substring(indentation);
   }
   final indentedHyphen = ' ' * getListIndentation(yaml, list) + '- ';

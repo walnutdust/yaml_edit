@@ -379,6 +379,28 @@ a:
   g: 1
 '''));
       });
+
+      test(
+          'flow collection structure does not get substringed when added to block structure',
+          () {
+        final doc = YamlEditor('''
+a:
+  - false
+''');
+        doc.prependToList(['a'],
+            wrapAsYamlNode([1234], collectionStyle: CollectionStyle.FLOW));
+        expect(doc.toString(), equals('''
+a:
+  - [1234]
+  - false
+'''));
+        expectYamlBuilderValue(doc, {
+          'a': [
+            [1234],
+            false
+          ]
+        });
+      });
     });
   });
 
