@@ -3,13 +3,11 @@ import 'package:yaml/yaml.dart';
 
 void main() {
   final doc = YamlEditor('''
-a:
- - b
- - - c
-   - d
+- >
+    folded string
 ''');
-  doc.prependToList(
-      ['a'], wrapAsYamlNode({1: 2}, collectionStyle: CollectionStyle.FLOW));
+  doc.assign(
+      [0], wrapAsYamlNode('test\ntest\n\n', scalarStyle: ScalarStyle.FOLDED));
 
   print(doc);
 }

@@ -73,9 +73,20 @@ String _getSingleQuotedString(String string) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getFoldedString(String string, int indentation) {
-  var result = '>-\n';
-  result += ' ' * indentation;
-  return result + string.replaceAll('\n', '\n\n' + ' ' * indentation);
+  var result;
+
+  final trimmedString = string.trimRight();
+  final removedPortion = string.substring(trimmedString.length);
+
+  if (removedPortion.contains('\n')) {
+    result = '>+\n' + ' ' * indentation;
+  } else {
+    result = '>-\n' + ' ' * indentation;
+  }
+
+  return result +
+      trimmedString.replaceAll('\n', '\n\n' + ' ' * indentation) +
+      removedPortion;
 }
 
 /// Generates a YAML-safe literal string.
@@ -137,7 +148,7 @@ String getBlockScalar(Object value, int indentation) {
       }
 
       // Strings with only white spaces will cause a misparsing
-      if (value.value.trimLeft().length == value.value.length &&
+      if (value.value.trim().length == value.value.length &&
           value.value.length != 0) {
         if (value.style == ScalarStyle.FOLDED) {
           return _getFoldedString(value.value, indentation);

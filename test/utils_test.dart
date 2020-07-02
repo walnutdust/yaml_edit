@@ -291,18 +291,18 @@ strings:
 '''));
       });
 
-//       test('rewrites folded strings properly (1)', () {
-//         final doc = YamlEditor('''
-// - >
-//     folded string''');
-//         doc.assign(
-//             [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
-//         expect(doc.toString(), equals('''
-// - >
-//     test
+      test('rewrites folded strings properly (1)', () {
+        final doc = YamlEditor('''
+- >
+    folded string''');
+        doc.assign(
+            [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
+        expect(doc.toString(), equals('''
+- >-
+    test
 
-//     test'''));
-//       });
+    test'''));
+      });
 
       test('generates literal strings properly', () {
         final doc = YamlEditor('');
