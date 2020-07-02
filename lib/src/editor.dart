@@ -179,11 +179,8 @@ class YamlEditor {
     final valueNode = wrapAsYamlNode(value);
 
     if (parentNode is YamlList) {
-      var expectedList =
+      final expectedList =
           updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
-
-      expectedList = ensureNodeContextStyling(
-          expectedList, parentNode.style == CollectionStyle.FLOW);
 
       _performEdit(assignInList(_yaml, parentNode, keyOrIndex, value),
           collectionPath, expectedList);
@@ -193,12 +190,8 @@ class YamlEditor {
     if (parentNode is YamlMap) {
       final keyNode = wrapAsYamlNode(keyOrIndex);
 
-      var expectedMap =
+      final expectedMap =
           updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode);
-
-      expectedMap = ensureNodeContextStyling(
-          expectedMap, parentNode.style == CollectionStyle.FLOW);
-
       _performEdit(assignInMap(_yaml, parentNode, keyOrIndex, value),
           collectionPath, expectedMap);
       return;
@@ -242,11 +235,9 @@ class YamlEditor {
 
     final edit = insertInList(_yaml, list, index, value);
 
-    var expectedList = updatedYamlList(
+    final expectedList = updatedYamlList(
         list, (nodes) => nodes.insert(index, wrapAsYamlNode(value)));
 
-    expectedList = ensureNodeContextStyling(
-        expectedList, list.style == CollectionStyle.FLOW);
     _performEdit(edit, path, expectedList);
   }
 

@@ -73,7 +73,7 @@ String _getSingleQuotedString(String string) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getFoldedString(String string, int indentation) {
-  var result = '>\n';
+  var result = '>-\n';
   result += ' ' * indentation;
   return result + string.replaceAll('\n', '\n\n' + ' ' * indentation);
 }
@@ -83,7 +83,7 @@ String _getFoldedString(String string, int indentation) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getLiteralString(String string, int indentation) {
-  final result = '|\n$string';
+  final result = '|-\n$string';
   return result.replaceAll('\n', '\n' + ' ' * indentation);
 }
 

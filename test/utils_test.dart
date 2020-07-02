@@ -168,18 +168,18 @@ c:
 
         expect(doc.toString(), equals('''
 - - plain string
-  - >
+  - >-
       folded string
   - 'single-quoted string'
-  - |
+  - |-
       literal string
   - "double-quoted string"'''));
         expectYamlBuilderValue(doc, [
           [
             'plain string',
-            'folded string\n',
+            'folded string',
             'single-quoted string',
-            'literal string\n',
+            'literal string',
             'double-quoted string',
           ]
         ]);
@@ -204,18 +204,18 @@ c:
         expect(doc.toString(), equals('''
 strings: 
   plain: string
-  folded: >
+  folded: >-
       string
   single-quoted: 'string'
-  literal: |
+  literal: |-
       string
   double-quoted: "string"'''));
         expectYamlBuilderValue(doc, {
           'strings': {
             'plain': 'string',
-            'folded': 'string\n',
+            'folded': 'string',
             'single-quoted': 'string',
-            'literal': 'string\n',
+            'literal': 'string',
             'double-quoted': 'string',
           }
         });
@@ -273,7 +273,7 @@ strings:
         final doc = YamlEditor('');
         doc.assign(
             [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
-        expect(doc.toString(), equals('>\n  test\n\n  test'));
+        expect(doc.toString(), equals('>-\n  test\n\n  test'));
       });
 
       test('rewrites folded strings properly', () {
@@ -284,7 +284,7 @@ strings:
         doc.assign(
             [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
         expect(doc.toString(), equals('''
-- >
+- >-
     test
 
     test
@@ -308,7 +308,7 @@ strings:
         final doc = YamlEditor('');
         doc.assign(
             [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
-        expect(doc.toString(), equals('|\n  test\n  test'));
+        expect(doc.toString(), equals('|-\n  test\n  test'));
       });
 
       test('rewrites literal strings properly', () {
@@ -319,7 +319,7 @@ strings:
         doc.assign([0],
             wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
         expect(doc.toString(), equals('''
-- |
+- |-
     test
     test
 '''));
