@@ -21,3 +21,13 @@ class PathError extends ArgumentError {
     return 'Invalid path: $path. $message';
   }
 }
+
+/// Error thrown when the path contains an alias along the way.
+/// Differs from [PathError] because this extends [UnsupportedError], and
+/// may be fixed in the future.
+class AliasError extends UnsupportedError {
+  /// The path that caused the error
+  final Iterable<Object> path;
+
+  AliasError(this.path) : super('Encountered an alias along $path!');
+}

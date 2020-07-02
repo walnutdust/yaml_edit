@@ -2,7 +2,7 @@ import 'dart:collection' show UnmodifiableListView;
 
 import 'package:meta/meta.dart';
 import 'package:yaml/yaml.dart';
-import 'package:yaml_edit/src/path_error.dart';
+import 'package:yaml_edit/src/errors.dart';
 
 import 'equality.dart';
 import 'list_mutations.dart';
@@ -59,6 +59,9 @@ class YamlEditor {
   /// Root node of YAML AST.
   YamlNode _contents;
 
+  /// Stores the list of nodes in [_contents] that are connected by aliases.
+  final Set<YamlNode> _aliases = {};
+
   @override
   String toString() => _yaml;
 
@@ -66,6 +69,25 @@ class YamlEditor {
 
   YamlEditor._(this._yaml) {
     _contents = loadYamlNode(_yaml);
+
+    var stack = [_contents];
+    var map = <YamlNode, bool>{};
+
+    while (stack.isNotEmpty) {
+      var nextElem = stack.removeLast();
+
+      if (map[nextElem] == null) {
+        map[nextElem] = true;
+      } else {
+        _aliases.add(nextElem);
+      }
+
+      if (nextElem is YamlMap) {
+        stack.addAll(nextElem.nodes.values);
+      } else if (nextElem is YamlList) {
+        stack.addAll(nextElem.nodes);
+      }
+    }
   }
 
   /// Parses the document to return [YamlNode] currently present at [path]. If no [YamlNode]s exist
@@ -114,7 +136,6 @@ class YamlEditor {
       return _traverse(path);
     } on PathError {
       if (orElse == #noArg) rethrow;
-      if (orElse is YamlNode) return orElse;
 
       return wrapAsYamlNode(orElse);
     }
@@ -174,7 +195,7 @@ class YamlEditor {
     final pathAsList = path.toList();
     final collectionPath = pathAsList.take(path.length - 1);
     final keyOrIndex = pathAsList.last;
-    final parentNode = parseAt(collectionPath);
+    final parentNode = _traverse(collectionPath, checkAlias: true);
 
     final valueNode = wrapAsYamlNode(value);
 
@@ -230,7 +251,7 @@ class YamlEditor {
     ArgumentError.checkNotNull(path, 'path');
     RangeError.checkNotNegative(index, 'index');
 
-    final list = _traverseToList(path);
+    final list = _traverseToList(path, checkAlias: true);
     RangeError.checkValueInInterval(index, 0, list.length);
 
     final edit = insertInList(_yaml, list, index, value);
@@ -259,7 +280,7 @@ class YamlEditor {
     ArgumentError.checkNotNull(deleteCount, 'deleteCount');
     ArgumentError.checkNotNull(values, 'values');
 
-    final list = _traverseToList(path);
+    final list = _traverseToList(path, checkAlias: true);
 
     RangeError.checkValueInInterval(index, 0, list.length);
     RangeError.checkValueInInterval(index + deleteCount, 0, list.length);
@@ -291,7 +312,7 @@ class YamlEditor {
 
     var edit;
     var expectedNode;
-    var nodeToRemove = parseAt(path);
+    var nodeToRemove = _traverse(path, checkAlias: true);
 
     if (path.isEmpty) {
       expectedNode = null;
@@ -304,7 +325,7 @@ class YamlEditor {
     final pathAsList = path.toList();
     final collectionPath = pathAsList.take(path.length - 1);
     final keyOrIndex = pathAsList.last;
-    final parentNode = parseAt(collectionPath);
+    final parentNode = _traverse(collectionPath);
 
     if (parentNode is YamlList) {
       edit = removeInList(_yaml, parentNode, keyOrIndex);
@@ -323,8 +344,9 @@ class YamlEditor {
   }
 
   /// Traverses down [path] to return the [YamlNode] at [path] if successful, throwing an
-  /// error otherwise.
-  YamlNode _traverse(Iterable<Object> path) {
+  /// error otherwise. If [checkAlias] is `true`, throw [AliasError] if an aliased node is
+  /// encountered.
+  YamlNode _traverse(Iterable<Object> path, {bool checkAlias = false}) {
     ArgumentError.checkNotNull(path, 'path');
 
     if (path.isEmpty) {
@@ -354,6 +376,11 @@ class YamlEditor {
       }
     }
 
+    // We only have to check at the end, because we count children of aliased nodes as aliases too
+    if (checkAlias && _aliases.contains(currentNode)) {
+      throw AliasError(path);
+    }
+
     return currentNode;
   }
 
@@ -362,10 +389,12 @@ class YamlEditor {
   /// Convenience function to ensure that a [YamlList] is returned.
   ///
   /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
-  YamlList _traverseToList(Iterable<Object> path) {
+  /// If [checkAlias] is `true`, and an aliased node is encountered along [path], an error
+  /// will be similarly thrown.
+  YamlList _traverseToList(Iterable<Object> path, {bool checkAlias = false}) {
     ArgumentError.checkNotNull(path, 'path');
 
-    final possibleList = parseAt(path);
+    final possibleList = _traverse(path, checkAlias: true);
 
     if (possibleList is YamlList) {
       return possibleList;
