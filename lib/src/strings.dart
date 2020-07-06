@@ -33,6 +33,8 @@ String _tryGetPlainString(Object value) {
 
 /// Checks if [string] has unprintable characters according to [unprintableCharCodes].
 bool hasUnprintableCharacters(String string) {
+  ArgumentError.checkNotNull(string, 'string');
+
   final codeUnits = string.codeUnits;
 
   for (var key in unprintableCharCodes.keys) {
@@ -47,6 +49,8 @@ bool hasUnprintableCharacters(String string) {
 ///
 /// See 5.7 Escaped Characters https://yaml.org/spec/1.2/spec.html#id2776092
 String _getDoubleQuotedString(String string) {
+  ArgumentError.checkNotNull(string, 'string');
+
   final buffer = StringBuffer();
   for (var codeUnit in string.codeUnits) {
     if (doubleQuoteEscapeChars[codeUnit] != null) {
@@ -64,6 +68,8 @@ String _getDoubleQuotedString(String string) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getSingleQuotedString(String string) {
+  ArgumentError.checkNotNull(string, 'string');
+
   final result = string.replaceAll('\'', '\'\'');
   return '\'$result\'';
 }
@@ -73,6 +79,10 @@ String _getSingleQuotedString(String string) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getFoldedString(String string, int indentation, String lineEnding) {
+  ArgumentError.checkNotNull(string, 'string');
+  ArgumentError.checkNotNull(indentation, 'indentation');
+  ArgumentError.checkNotNull(lineEnding, 'lineEnding');
+
   var result;
 
   final trimmedString = string.trimRight();
@@ -84,9 +94,11 @@ String _getFoldedString(String string, int indentation, String lineEnding) {
     result = '>-\n' + ' ' * indentation;
   }
 
-  // Duplicating the newline preserves it in YAML.
+  /// Duplicating the newline preserves it in YAML.
+  /// Assumes the user did not try to account for windows documents by using
+  /// `\r\n` already
   return result +
-      trimmedString.replaceAll('\n', '$lineEnding' * 2 + ' ' * indentation) +
+      trimmedString.replaceAll('\n', lineEnding * 2 + ' ' * indentation) +
       removedPortion;
 }
 
@@ -95,6 +107,10 @@ String _getFoldedString(String string, int indentation, String lineEnding) {
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
 String _getLiteralString(String string, int indentation, String lineEnding) {
+  ArgumentError.checkNotNull(string, 'string');
+  ArgumentError.checkNotNull(indentation, 'indentation');
+  ArgumentError.checkNotNull(lineEnding, 'lineEnding');
+
   final result = '|-\n$string';
 
   /// Assumes the user did not try to account for windows documents by using
@@ -139,6 +155,9 @@ String getFlowScalar(Object value) {
 /// 'null'), in which case we will produce [value] with default styling
 /// options.
 String getBlockScalar(Object value, int indentation, String lineEnding) {
+  ArgumentError.checkNotNull(indentation, 'indentation');
+  ArgumentError.checkNotNull(lineEnding, 'lineEnding');
+
   if (value is YamlScalar) {
     assertValidScalar(value.value);
 
@@ -205,6 +224,9 @@ String getFlowString(Object value) {
 ///
 /// If [value] is a [YamlNode], we respect its [style] parameter.
 String getBlockString(Object value, int indentation, String lineEnding) {
+  ArgumentError.checkNotNull(indentation, 'indentation');
+  ArgumentError.checkNotNull(lineEnding, 'lineEnding');
+
   var additionalIndentation = 2;
 
   if (value is YamlNode && !isBlockNode(value)) {

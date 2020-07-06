@@ -51,7 +51,7 @@ class SourceEdit {
   @override
   int get hashCode => hash3(offset, length, replacement);
 
-  /// Constructs a SourceEdit from Json.
+  /// Constructs a SourceEdit from JSON.
   ///
   /// ```dart
   /// final edit = {
@@ -63,6 +63,8 @@ class SourceEdit {
   /// final sourceEdit = SourceEdit.fromJson(edit);
   /// ```
   factory SourceEdit.fromJson(Map<String, dynamic> json) {
+    ArgumentError.checkNotNull(json, 'json');
+
     if (json is Map) {
       final offset = json['offset'];
       final length = json['length'];

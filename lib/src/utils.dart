@@ -7,6 +7,8 @@ import 'package:yaml/yaml.dart';
 /// This function is also capable of detecting if non-printable characters are in
 /// [string].
 bool isDangerousString(String string) {
+  ArgumentError.checkNotNull(string, 'string');
+
   try {
     if (loadYamlNode(string).value != string) {
       return true;
@@ -35,6 +37,8 @@ void assertValidScalar(Object value) {
 /// [ScalarStyle.ANY] and [CollectionStyle.ANY] are considered to be block styling
 /// by default for maximum flexibility.
 bool isBlockNode(YamlNode node) {
+  ArgumentError.checkNotNull(node, 'node');
+
   if (node is YamlScalar) {
     if (node.style == ScalarStyle.LITERAL ||
         node.style == ScalarStyle.FOLDED ||
@@ -56,6 +60,8 @@ bool isBlockNode(YamlNode node) {
 /// Returns the content sensitive ending offset of [yamlNode] (i.e. where the last
 /// meaningful content happens)
 int getContentSensitiveEnd(YamlNode yamlNode) {
+  ArgumentError.checkNotNull(yamlNode, 'yamlNode');
+
   if (yamlNode is YamlList) {
     if (yamlNode.style == CollectionStyle.FLOW) {
       return yamlNode.span.end.offset;
@@ -105,6 +111,8 @@ bool isFlowYamlCollectionNode(Object value) {
 ///
 /// Returns the length of [map] if the keys in [map] are not in alphabetical order.
 int getMapInsertionIndex(YamlMap map, Object newKey) {
+  ArgumentError.checkNotNull(map, 'map');
+
   final keys = map.nodes.keys.map((k) => k.toString()).toList();
 
   for (var i = 1; i < keys.length; i++) {

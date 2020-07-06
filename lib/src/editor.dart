@@ -129,6 +129,7 @@ class YamlEditor {
   factory YamlEditor(String yaml) => YamlEditor._(yaml);
 
   YamlEditor._(this._yaml) {
+    ArgumentError.checkNotNull(_yaml);
     initialize();
   }
 
@@ -319,7 +320,6 @@ class YamlEditor {
   /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
   void insertIntoList(Iterable<Object> path, int index, Object value) {
     ArgumentError.checkNotNull(path, 'path');
-    RangeError.checkNotNegative(index, 'index');
 
     final list = _traverseToList(path, checkAlias: true);
     RangeError.checkValueInInterval(index, 0, list.length);
@@ -385,7 +385,6 @@ class YamlEditor {
     var nodeToRemove = _traverse(path, checkAlias: true);
 
     if (path.isEmpty) {
-      expectedNode = null;
       edit = SourceEdit(0, _yaml.length, '');
 
       _performEdit(edit, path, expectedNode);
@@ -418,10 +417,9 @@ class YamlEditor {
   /// encountered.
   YamlNode _traverse(Iterable<Object> path, {bool checkAlias = false}) {
     ArgumentError.checkNotNull(path, 'path');
+    ArgumentError.checkNotNull(checkAlias, 'checkAlias');
 
-    if (path.isEmpty) {
-      return _contents;
-    }
+    if (path.isEmpty) return _contents;
 
     var currentNode = _contents;
 
@@ -456,6 +454,8 @@ class YamlEditor {
 
   /// Asserts that none of the children of [node] are aliases
   void _assertNoChildAlias(Iterable<Object> path, [YamlNode node]) {
+    ArgumentError.checkNotNull(path, 'path');
+
     if (node == null) return _assertNoChildAlias(path, _traverse(path));
     if (_aliases.contains(node)) throw AliasError(path);
 
@@ -486,6 +486,7 @@ class YamlEditor {
   /// will be similarly thrown.
   YamlList _traverseToList(Iterable<Object> path, {bool checkAlias = false}) {
     ArgumentError.checkNotNull(path, 'path');
+    ArgumentError.checkNotNull(checkAlias, 'checkAlias');
 
     final possibleList = _traverse(path, checkAlias: true);
 
@@ -558,20 +559,24 @@ $expectedTree''');
           tree,
           (nodes) =>
               nodes[index] = _deepModify(nodes[index], nextPath, expectedNode));
-    } else if (tree is YamlMap) {
+    }
+
+    if (tree is YamlMap) {
       final keyNode = wrapAsYamlNode(path.first);
       return updatedYamlMap(
           tree,
           (nodes) => nodes[keyNode] =
               _deepModify(nodes[keyNode], nextPath, expectedNode));
-    } else {
-      throw PathError(path, path.first, tree);
     }
+
+    throw PathError(path, path.first, tree);
   }
 
   /// Gets the indentation level of [map]. This is 0 if it is a flow map,
   /// but returns the number of spaces before the keys for block maps.
   int getMapIndentation(YamlMap map) {
+    ArgumentError.checkNotNull(map, 'map');
+
     if (map.style == CollectionStyle.FLOW) return 0;
 
     /// An empty block map doesn't really exist.
@@ -590,6 +595,8 @@ $expectedTree''');
       return lastSpanOffset - lastNewLine - 1;
     }
 
+    /// If there is a question mark, it might be a complex key. Check if it
+    /// is on the same line as the key node to verify.
     if (lastNewLine == -1) return lastQuestionMark;
     if (lastQuestionMark > lastNewLine) {
       return lastQuestionMark - lastNewLine - 1;
@@ -604,6 +611,8 @@ $expectedTree''');
   ///
   /// Throws [UnsupportedError] if an empty block map is passed in.
   int getListIndentation(YamlList list) {
+    ArgumentError.checkNotNull(list, 'list');
+
     if (list.style == CollectionStyle.FLOW) return 0;
 
     /// An empty block map doesn't really exist.

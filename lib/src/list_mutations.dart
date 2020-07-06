@@ -9,6 +9,10 @@ import 'utils.dart';
 /// effect of setting the element at [index] to [newValue] when re-parsed.
 SourceEdit assignInList(
     YamlEditor yamlEdit, YamlList list, int index, Object newValue) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+  RangeError.checkValueInInterval(index, 0, list.length - 1);
+
   final currValue = list.nodes[index];
   final offset = currValue.span.start.offset;
   var valueString;
@@ -20,10 +24,14 @@ SourceEdit assignInList(
     final listIndentation = yamlEdit.getListIndentation(list);
     final indentation = listIndentation + yamlEdit.indentation;
     valueString = getBlockString(newValue, indentation, yamlEdit.lineEnding);
+
+    /// We prefer the compact nested notation for lists
     if (isCollection(newValue)) {
       valueString = valueString.substring(indentation);
     } else if (isCollection(currValue) &&
         getStyle(currValue) == CollectionStyle.BLOCK) {
+      /// The span of a block collection in a block list extends until the
+      /// next hyphen, so we need to account for this.
       valueString += yamlEdit.lineEnding + ' ' * listIndentation;
     }
   } else {
@@ -36,6 +44,9 @@ SourceEdit assignInList(
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of appending [elem] to the list.
 SourceEdit appendIntoList(YamlEditor yamlEdit, YamlList list, Object elem) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+
   if (list.style == CollectionStyle.FLOW) {
     return _appendToFlowList(yamlEdit, list, elem);
   } else {
@@ -47,9 +58,9 @@ SourceEdit appendIntoList(YamlEditor yamlEdit, YamlList list, Object elem) {
 /// effect of inserting [elem] to the list at [index].
 SourceEdit insertInList(
     YamlEditor yamlEdit, YamlList list, int index, Object elem) {
-  if (index > list.length || index < 0) {
-    throw RangeError.range(index, 0, list.length);
-  }
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+  RangeError.checkValueInInterval(index, 0, list.length);
 
   /// We call the append method if the user wants to append it to the end of the list
   /// because appending requires different techniques.
@@ -67,6 +78,9 @@ SourceEdit insertInList(
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of removing the element at [index] when re-parsed.
 SourceEdit removeInList(YamlEditor yamlEdit, YamlList list, int index) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+
   final nodeToRemove = list.nodes[index];
 
   if (list.style == CollectionStyle.FLOW) {
@@ -79,6 +93,9 @@ SourceEdit removeInList(YamlEditor yamlEdit, YamlList list, int index) {
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of addition [elem] into [nodes], noting that this is a flow list.
 SourceEdit _appendToFlowList(YamlEditor yamlEdit, YamlList list, Object elem) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+
   final valueString = _formatNewFlow(list, elem, true);
   return SourceEdit(list.span.end.offset - 1, 0, valueString);
 }
@@ -86,6 +103,9 @@ SourceEdit _appendToFlowList(YamlEditor yamlEdit, YamlList list, Object elem) {
 /// Returns a [SourceEdit] describing the change to be made on [yaml] to achieve the
 /// effect of addition [elem] into [nodes], noting that this is a block list.
 SourceEdit _appendToBlockList(YamlEditor yamlEdit, YamlList list, Object elem) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+
   var formattedValue = _formatNewBlock(yamlEdit, list, elem);
 
   // Adjusts offset to after the trailing newline of the last entry, if it exists
@@ -103,6 +123,9 @@ SourceEdit _appendToBlockList(YamlEditor yamlEdit, YamlList list, Object elem) {
 
 /// Formats [elem] into a new node for block lists.
 String _formatNewBlock(YamlEditor yamlEdit, YamlList list, Object elem) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+
   final listIndentation = yamlEdit.getListIndentation(list);
   final newIndentation = listIndentation + yamlEdit.indentation;
 
@@ -117,10 +140,16 @@ String _formatNewBlock(YamlEditor yamlEdit, YamlList list, Object elem) {
 
 /// Formats [elem] into a new node for flow lists.
 String _formatNewFlow(YamlList list, Object elem, [bool isLast = false]) {
+  ArgumentError.checkNotNull(list, 'list');
+  ArgumentError.checkNotNull(isLast, 'isLast');
+
   var valueString = getFlowString(elem);
   if (list.isNotEmpty) {
-    if (isLast) valueString = ', $valueString';
-    if (!isLast) valueString += ', ';
+    if (isLast) {
+      valueString = ', $valueString';
+    } else {
+      valueString += ', ';
+    }
   }
 
   return valueString;
@@ -133,6 +162,10 @@ String _formatNewFlow(YamlList list, Object elem, [bool isLast = false]) {
 /// [index] should be non-negative and less than or equal to [length].
 SourceEdit _insertInBlockList(
     YamlEditor yamlEdit, YamlList list, int index, Object elem) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+  RangeError.checkValueInInterval(index, 0, list.length);
+
   if (index == list.length) return _appendToBlockList(yamlEdit, list, elem);
 
   final formattedValue = _formatNewBlock(yamlEdit, list, elem);
@@ -152,6 +185,10 @@ SourceEdit _insertInBlockList(
 /// [index] should be non-negative and less than or equal to [length].
 SourceEdit _insertInFlowList(
     YamlEditor yamlEdit, YamlList list, int index, Object elem) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+  RangeError.checkValueInInterval(index, 0, list.length);
+
   if (index == list.length) return _appendToFlowList(yamlEdit, list, elem);
 
   final formattedValue = _formatNewFlow(list, elem);
@@ -171,6 +208,10 @@ SourceEdit _insertInFlowList(
 /// [index] should be non-negative and less than or equal to [length].
 SourceEdit _removeFromBlockList(
     YamlEditor yamlEdit, YamlList list, YamlNode removedNode, int index) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+  RangeError.checkValueInInterval(index, 0, list.length - 1);
+
   /// If we are removing the last element in a block list, convert it into a flow
   /// empty list.
   if (list.length == 1) {
@@ -199,6 +240,10 @@ SourceEdit _removeFromBlockList(
 /// [index] should be non-negative and less than or equal to [length].
 SourceEdit _removeFromFlowList(
     YamlEditor yamlEdit, YamlList list, YamlNode nodeToRemove, int index) {
+  ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
+  ArgumentError.checkNotNull(list, 'list');
+  RangeError.checkValueInInterval(index, 0, list.length - 1);
+
   final span = nodeToRemove.span;
   final yaml = yamlEdit.toString();
   var start = span.start.offset;

@@ -9,6 +9,8 @@ import 'utils.dart';
 /// Returns a new [YamlList] constructed by applying [update] onto the [nodes]
 /// of this [YamlList].
 YamlList updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
+  ArgumentError.checkNotNull(list, 'list');
+
   final newNodes = [...list.nodes];
   update(newNodes);
   return wrapAsYamlNode(newNodes);
@@ -17,6 +19,8 @@ YamlList updatedYamlList(YamlList list, Function(List<YamlNode>) update) {
 /// Returns a new [YamlMap] constructed by applying [update] onto the [nodes]
 /// of this [YamlMap].
 YamlMap updatedYamlMap(YamlMap map, Function(Map) update) {
+  ArgumentError.checkNotNull(map, 'map');
+
   final dummyMap = deepEqualsMap();
   dummyMap.addAll(map.nodes);
 
@@ -64,10 +68,8 @@ YamlNode wrapAsYamlNode(Object value,
 /// which takes in [style] as an argument.
 class YamlScalarWrap implements YamlScalar {
   /// The [ScalarStyle] to be used for the scalar.
-  ScalarStyle _style;
-
   @override
-  ScalarStyle get style => _style;
+  final ScalarStyle style;
 
   @override
   final SourceSpan span;
@@ -75,10 +77,8 @@ class YamlScalarWrap implements YamlScalar {
   @override
   final dynamic value;
 
-  YamlScalarWrap(this.value,
-      {ScalarStyle style = ScalarStyle.ANY, Object sourceUrl})
-      : span = shellSpan(sourceUrl),
-        _style = style {
+  YamlScalarWrap(this.value, {this.style = ScalarStyle.ANY, Object sourceUrl})
+      : span = shellSpan(sourceUrl) {
     ArgumentError.checkNotNull(style, 'scalarStyle');
   }
 
@@ -92,10 +92,8 @@ class YamlMapWrap
     with collection.MapMixin, UnmodifiableMapMixin
     implements YamlMap {
   /// The [CollectionStyle] to be used for the map.
-  CollectionStyle _style;
-
   @override
-  CollectionStyle get style => _style;
+  final CollectionStyle style;
 
   @override
   final Map<dynamic, YamlNode> nodes;
@@ -123,7 +121,7 @@ class YamlMapWrap
   YamlMapWrap._(this.nodes,
       {CollectionStyle style = CollectionStyle.ANY, Object sourceUrl})
       : span = shellSpan(sourceUrl),
-        _style = nodes.isEmpty ? CollectionStyle.FLOW : style;
+        style = nodes.isEmpty ? CollectionStyle.FLOW : style;
 
   @override
   dynamic operator [](Object key) => nodes[key]?.value;
@@ -139,10 +137,8 @@ class YamlMapWrap
 /// which takes in [style] as an argument.
 class YamlListWrap with collection.ListMixin implements YamlList {
   /// The [CollectionStyle] to be used for the list.
-  CollectionStyle _style;
-
   @override
-  CollectionStyle get style => _style;
+  final CollectionStyle style;
 
   @override
   final List<YamlNode> nodes;
@@ -171,7 +167,7 @@ class YamlListWrap with collection.ListMixin implements YamlList {
   YamlListWrap._(this.nodes,
       {CollectionStyle style = CollectionStyle.ANY, Object sourceUrl})
       : span = shellSpan(sourceUrl),
-        _style = nodes.isEmpty ? CollectionStyle.FLOW : style;
+        style = nodes.isEmpty ? CollectionStyle.FLOW : style;
 
   @override
   dynamic operator [](int index) => nodes[index].value;
@@ -183,25 +179,4 @@ class YamlListWrap with collection.ListMixin implements YamlList {
 
   @override
   List get value => this;
-}
-
-/// Sets the style of a [YamlMapWrap].
-///
-/// This function should not be exposed publicly.
-void setMapWrapStyle(YamlMapWrap node, CollectionStyle style) {
-  node._style = style;
-}
-
-/// Sets the style of a [YamlListWrap].
-///
-/// This function should not be exposed publicly.
-void setListWrapStyle(YamlListWrap node, CollectionStyle style) {
-  node._style = style;
-}
-
-/// Sets the style of a [YamlScalarWrap].
-///
-/// This function should not be exposed publicly.
-void setScalarWrapStyle(YamlScalarWrap node, ScalarStyle style) {
-  node._style = style;
 }

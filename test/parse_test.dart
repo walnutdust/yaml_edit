@@ -110,4 +110,16 @@ c: 3
           throwsUnsupportedError);
     });
   });
+
+  test('works with map keys', () {
+    final doc = YamlEditor('{a: {{[1, 2]: 3}: 4}}');
+    expect(
+        doc.parseAt([
+          'a',
+          {
+            [1, 2]: 3
+          }
+        ]).value,
+        equals(4));
+  });
 }
