@@ -72,7 +72,7 @@ String _getSingleQuotedString(String string) {
 ///
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
-String _getFoldedString(String string, int indentation) {
+String _getFoldedString(String string, int indentation, String lineEnding) {
   var result;
 
   final trimmedString = string.trimRight();
@@ -84,8 +84,9 @@ String _getFoldedString(String string, int indentation) {
     result = '>-\n' + ' ' * indentation;
   }
 
+  // Duplicating the newline preserves it in YAML.
   return result +
-      trimmedString.replaceAll('\n', '\n\n' + ' ' * indentation) +
+      trimmedString.replaceAll('\n', '$lineEnding' * 2 + ' ' * indentation) +
       removedPortion;
 }
 
@@ -93,9 +94,12 @@ String _getFoldedString(String string, int indentation) {
 ///
 /// It is important that we ensure that [string] is free of unprintable characters
 /// by calling [assertValidScalar] before invoking this function.
-String _getLiteralString(String string, int indentation) {
+String _getLiteralString(String string, int indentation, String lineEnding) {
   final result = '|-\n$string';
-  return result.replaceAll('\n', '\n' + ' ' * indentation);
+
+  /// Assumes the user did not try to account for windows documents by using
+  /// `\r\n` already
+  return result.replaceAll('\n', lineEnding + ' ' * indentation);
 }
 
 /// Returns [value] with the necessary formatting applied in a flow context
@@ -134,7 +138,7 @@ String getFlowScalar(Object value) {
 /// possible. Certain cases make this impossible (e.g. a folded string scalar
 /// 'null'), in which case we will produce [value] with default styling
 /// options.
-String getBlockScalar(Object value, int indentation) {
+String getBlockScalar(Object value, int indentation, String lineEnding) {
   if (value is YamlScalar) {
     assertValidScalar(value.value);
 
@@ -151,11 +155,11 @@ String getBlockScalar(Object value, int indentation) {
       if (value.value.trim().length == value.value.length &&
           value.value.length != 0) {
         if (value.style == ScalarStyle.FOLDED) {
-          return _getFoldedString(value.value, indentation);
+          return _getFoldedString(value.value, indentation, lineEnding);
         }
 
         if (value.style == ScalarStyle.LITERAL) {
-          return _getLiteralString(value.value, indentation);
+          return _getLiteralString(value.value, indentation, lineEnding);
         }
       }
     }
@@ -200,12 +204,8 @@ String getFlowString(Object value) {
 /// Returns [value] with the necessary formatting applied in a block context.
 ///
 /// If [value] is a [YamlNode], we respect its [style] parameter.
-String getBlockString(Object value,
-    [int indentation = 0, int additionalIndentation = 2]) {
-  if (additionalIndentation < 1) {
-    ArgumentError.value(
-        additionalIndentation, 'additionalIndentation', 'must be positive!');
-  }
+String getBlockString(Object value, int indentation, String lineEnding) {
+  var additionalIndentation = 2;
 
   if (value is YamlNode && !isBlockNode(value)) {
     return getFlowString(value);
@@ -221,7 +221,7 @@ String getBlockString(Object value,
     var children = value is YamlList ? value.nodes : value;
 
     safeValues = children.map((child) {
-      var valueString = getBlockString(child, newIndentation);
+      var valueString = getBlockString(child, newIndentation, lineEnding);
       if (isCollection(child) && !isFlowYamlCollectionNode(child)) {
         valueString = valueString.substring(newIndentation);
       }
@@ -229,9 +229,7 @@ String getBlockString(Object value,
       return ' ' * indentation + '- $valueString';
     });
 
-    /// We do a join('\n') rather than having it in the mapping to avoid
-    /// adding additional spaces when updating rather than adding elements.
-    return safeValues.join('\n');
+    return safeValues.join(lineEnding);
   } else if (value is Map) {
     if (value.isEmpty) return ' ' * indentation + '{}';
 
@@ -240,16 +238,14 @@ String getBlockString(Object value,
     return children.entries.map((entry) {
       final safeKey = getFlowString(entry.key);
       final formattedKey = ' ' * indentation + safeKey;
-      final formattedValue = getBlockString(entry.value, newIndentation);
+      final formattedValue =
+          getBlockString(entry.value, newIndentation, lineEnding);
 
       return formattedKey + ': ' + formattedValue;
-
-      /// We do a join('\n') rather than having it in the mapping to avoid
-      /// adding additional spaces when updating rather than adding elements.
-    }).join('\n');
+    }).join(lineEnding);
   }
 
-  return getBlockScalar(value, newIndentation);
+  return getBlockScalar(value, newIndentation, lineEnding);
 }
 
 /// List of unprintable characters.
