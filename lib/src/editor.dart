@@ -369,19 +369,42 @@ class YamlEditor {
         if (!containsKey(map, keyOrIndex)) {
           throw PathError(path, keyOrIndex, map);
         }
-
-        currentNode = map.nodes[keyOrIndex];
+        final keyNode = getKeyNode(map, keyOrIndex);
+        currentNode = map.nodes[keyNode];
       } else {
         throw PathError(path, keyOrIndex, currentNode);
       }
     }
 
     // We only have to check at the end, because we count children of aliased nodes as aliases too
-    if (checkAlias && _aliases.contains(currentNode)) {
-      throw AliasError(path);
+    if (checkAlias) {
+      _assertNoChildAlias(path, currentNode);
     }
 
     return currentNode;
+  }
+
+  /// Asserts that none of the children of [node] are aliases
+  void _assertNoChildAlias(Iterable<Object> path, [YamlNode node]) {
+    if (node == null) return _assertNoChildAlias(path, _traverse(path));
+    if (_aliases.contains(node)) throw AliasError(path);
+
+    if (node is YamlScalar) return;
+
+    if (node is YamlList) {
+      for (var i = 0; i < node.length; i++) {
+        var updatedPath = [...path, i];
+        _assertNoChildAlias(updatedPath, node.nodes[i]);
+      }
+    }
+
+    if (node is YamlMap) {
+      var keyList = node.keys.toList();
+      for (var i = 0; i < node.length; i++) {
+        var updatedPath = [...path, keyList[i]];
+        _assertNoChildAlias(updatedPath, node.nodes[keyList[i]]);
+      }
+    }
   }
 
   /// Traverses down the provided [path] to return the [YamlList] at [path].
