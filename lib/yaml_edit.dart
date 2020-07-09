@@ -21,6 +21,7 @@
 /// [1]: https://yaml.org/
 library yaml_edit;
 
-export 'src/source_edit.dart';
 export 'src/editor.dart';
+export 'src/equality.dart' show deepEquals;
+export 'src/source_edit.dart';
 export 'src/wrap.dart' show wrapAsYamlNode;

@@ -3,13 +3,13 @@ import 'package:yaml/yaml.dart';
 
 void main() {
   final doc = YamlEditor('''
-a:
- - b
- - - c
-   - d
+- 0 # comment 0
+# comment A
+- 1 # comment 1
+# comment B
+- 2 # comment 2
 ''');
-  doc.prependToList(
-      ['a'], wrapAsYamlNode({1: 2}, collectionStyle: CollectionStyle.FLOW));
+  doc.remove([1]);
 
   print(doc);
 }

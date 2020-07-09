@@ -2,9 +2,9 @@ import 'dart:collection' show UnmodifiableListView;
 
 import 'package:meta/meta.dart';
 import 'package:yaml/yaml.dart';
-import 'package:yaml_edit/src/errors.dart';
 
 import 'equality.dart';
+import 'errors.dart';
 import 'list_mutations.dart';
 import 'map_mutations.dart';
 import 'source_edit.dart';
@@ -380,8 +380,8 @@ class YamlEditor {
   YamlNode remove(Iterable<Object> path) {
     ArgumentError.checkNotNull(path, 'path');
 
-    var edit;
-    var expectedNode;
+    SourceEdit edit;
+    YamlNode expectedNode;
     var nodeToRemove = _traverse(path, checkAlias: true);
 
     if (path.isEmpty) {
