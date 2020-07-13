@@ -610,33 +610,77 @@ b: 2
 
       test('(3)', () {
         final doc = YamlEditor('''
-deps:
-  a: 1
-  z: 1
+a:
+  aa: 1
+  zz: 1
 ''');
         doc.update([
-          'deps',
-          'retry'
+          'a',
+          'bb'
         ], {
-          'git': {'url': 'url', 'path': 'retry'}
+          'aaa': {'dddd': 'c'},
+          'bbb': [0, 1, 2]
         });
 
         expect(doc.toString(), equals('''
-deps:
-  a: 1
-  retry: 
-    git:
-      url: url
-      path: retry
-  z: 1
+a:
+  aa: 1
+  bb: 
+    aaa:
+      dddd: c
+    bbb:
+      - 0
+      - 1
+      - 2
+  zz: 1
 '''));
         expectYamlBuilderValue(doc, {
-          'deps': {
-            'a': 1,
-            'retry': {
-              'git': {'url': 'url', 'path': 'retry'}
+          'a': {
+            'aa': 1,
+            'bb': {
+              'aaa': {'dddd': 'c'},
+              'bbb': [0, 1, 2]
             },
-            'z': 1
+            'zz': 1
+          }
+        });
+      });
+
+      test('(4)', () {
+        final doc = YamlEditor('''
+a:
+  aa: 1
+  zz: 1
+''');
+        doc.update([
+          'a',
+          'bb'
+        ], [
+          0,
+          [1, 2],
+          {'aaa': 'b', 'bbb': 'c'}
+        ]);
+
+        expect(doc.toString(), equals('''
+a:
+  aa: 1
+  bb: 
+    - 0
+    - - 1
+      - 2
+    - aaa: b
+      bbb: c
+  zz: 1
+'''));
+        expectYamlBuilderValue(doc, {
+          'a': {
+            'aa': 1,
+            'bb': [
+              0,
+              [1, 2],
+              {'aaa': 'b', 'bbb': 'c'}
+            ],
+            'zz': 1
           }
         });
       });
