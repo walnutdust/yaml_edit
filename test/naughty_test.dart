@@ -1,14 +1,14 @@
 import 'package:test/test.dart';
-import 'package:yaml_edit/src/editor.dart';
+import 'package:yaml_edit/yaml_edit.dart';
 
-import './blns/blns.dart';
+import 'problem_strings.dart';
 
-void main() async {
-  for (var string in naughtyStrings) {
+void main() {
+  for (var string in problemStrings) {
     test('expect string $string', () {
       final doc = YamlEditor('');
 
-      expect(() => doc.assign([], string), returnsNormally);
+      expect(() => doc.update([], string), returnsNormally);
       final value = doc.parseAt([]).value;
       expect(value, isA<String>());
       expect(value, equals(string));

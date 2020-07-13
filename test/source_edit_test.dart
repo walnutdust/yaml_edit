@@ -1,5 +1,5 @@
-import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('SourceEdit', () {
@@ -101,13 +101,13 @@ void main() {
 
     group('applyAll', () {
       test('returns original string when empty list is passed in', () {
-        final original = 'YAML: YAML';
+        const original = 'YAML: YAML';
         final result = SourceEdit.applyAll(original, []);
 
         expect(result, original);
       });
       test('works with list of one SourceEdit', () {
-        final original = 'YAML: YAML';
+        const original = 'YAML: YAML';
         final sourceEdits = [SourceEdit(6, 4, 'YAML Ain\'t Markup Language')];
 
         final result = SourceEdit.applyAll(original, sourceEdits);
@@ -115,7 +115,7 @@ void main() {
         expect(result, "YAML: YAML Ain't Markup Language");
       });
       test('works with list of multiple SourceEdits', () {
-        final original = 'YAML: YAML';
+        const original = 'YAML: YAML';
         final sourceEdits = [
           SourceEdit(6, 4, "YAML Ain't Markup Language"),
           SourceEdit(6, 4, "YAML Ain't Markup Language"),

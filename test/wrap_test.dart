@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:yaml_edit/yaml_edit.dart';
 import 'package:yaml_edit/src/equality.dart';
 import 'package:yaml_edit/src/wrap.dart';
 import 'package:yaml/yaml.dart';
@@ -158,7 +159,7 @@ void main() {
       var hashCode1 = deepHashCode('foo');
       var hashCode2 = deepHashCode(wrapAsYamlNode('bar'));
 
-      expect(hashCode1, notEquals((hashCode2)));
+      expect(hashCode1, notEquals(hashCode2));
     });
 
     test('returns the same result for YamlScalar with style and its value', () {
@@ -225,8 +226,7 @@ void main() {
         () {
       var hashCode1 = deepHashCode(
           wrapAsYamlNode([1, 2, 3], collectionStyle: CollectionStyle.BLOCK));
-      var hashCode2 = deepHashCode(
-          wrapAsYamlNode([1, 2, 3], collectionStyle: CollectionStyle.ANY));
+      var hashCode2 = deepHashCode(wrapAsYamlNode([1, 2, 3]));
 
       expect(hashCode1, equals(hashCode2));
     });

@@ -8,7 +8,7 @@ import 'utils.dart';
 
 /// Performs the string operation on [yaml] to achieve the effect of setting
 /// the element at [key] to [newValue] when re-parsed.
-SourceEdit assignInMap(
+SourceEdit updateInMap(
     YamlEditor yamlEdit, YamlMap map, Object key, Object newValue) {
   ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
   ArgumentError.checkNotNull(map, 'map');
@@ -47,7 +47,8 @@ SourceEdit removeInMap(YamlEditor yamlEdit, YamlMap map, Object key) {
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of adding
-/// the [key]:[newValue] pair when reparsed, bearing in mind that this is a block map.
+/// the [key]:[newValue] pair when reparsed, bearing in mind that this is a
+/// block map.
 SourceEdit _addToBlockMap(
     YamlEditor yamlEdit, YamlMap map, Object key, Object newValue) {
   ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
@@ -70,7 +71,8 @@ SourceEdit _addToBlockMap(
   if (map.isNotEmpty) {
     final yaml = yamlEdit.toString();
 
-    // Adjusts offset to after the trailing newline of the last entry, if it exists
+    /// Adjusts offset to after the trailing newline of the last entry, if it
+    /// exists
     if (insertionIndex == map.length) {
       final lastValueSpanEnd = getContentSensitiveEnd(map.nodes.values.last);
       final nextNewLineIndex = yaml.indexOf('\n', lastValueSpanEnd);
@@ -81,7 +83,7 @@ SourceEdit _addToBlockMap(
         formattedValue = yamlEdit.lineEnding + formattedValue;
       }
     } else {
-      final keyAtIndex = (map.nodes.keys.toList()[insertionIndex] as YamlNode);
+      final keyAtIndex = map.nodes.keys.toList()[insertionIndex] as YamlNode;
       final keySpanStart = keyAtIndex.span.start.offset;
       final prevNewLineIndex = yaml.lastIndexOf('\n', keySpanStart);
 
@@ -95,7 +97,8 @@ SourceEdit _addToBlockMap(
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of adding
-/// the [key]:[newValue] pair when reparsed, bearing in mind that this is a flow map.
+/// the [key]:[newValue] pair when reparsed, bearing in mind that this is a flow
+/// map.
 SourceEdit _addToFlowMap(
     YamlEditor yamlEdit, YamlMap map, Object key, Object newValue) {
   ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
@@ -122,8 +125,8 @@ SourceEdit _addToFlowMap(
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of replacing
-/// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
-/// block map.
+/// the value at [key] with [newValue] when reparsed, bearing in mind that this
+/// is a block map.
 SourceEdit _replaceInBlockMap(
     YamlEditor yamlEdit, YamlMap map, Object key, Object newValue) {
   ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');
@@ -146,8 +149,8 @@ SourceEdit _replaceInBlockMap(
 }
 
 /// Performs the string operation on [yaml] to achieve the effect of replacing
-/// the value at [key] with [newValue] when reparsed, bearing in mind that this is a
-/// flow map.
+/// the value at [key] with [newValue] when reparsed, bearing in mind that this
+/// is a flow map.
 SourceEdit _replaceInFlowMap(
     YamlEditor yamlEdit, YamlMap map, Object key, Object newValue) {
   ArgumentError.checkNotNull(yamlEdit, 'yamlEdit');

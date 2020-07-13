@@ -1,17 +1,17 @@
 import 'package:test/test.dart';
-import 'package:yaml/yaml.dart';
-import 'package:yaml_edit/src/utils.dart';
-import 'package:yaml_edit/src/wrap.dart';
+
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:yaml_edit/src/utils.dart';
+import 'package:yaml/yaml.dart';
 
 import 'test_utils.dart';
 
 void main() {
   group('styling options', () {
-    group('assign', () {
+    group('update', () {
       test('flow map with style', () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
-        doc.assign(['YAML'],
+        doc.update(['YAML'],
             wrapAsYamlNode('hi', scalarStyle: ScalarStyle.DOUBLE_QUOTED));
 
         expect(doc.toString(), equals('{YAML: "hi"}'));
@@ -20,7 +20,7 @@ void main() {
 
       test('prevents block scalars in flow map', () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
-        doc.assign(
+        doc.update(
             ['YAML'], wrapAsYamlNode('test', scalarStyle: ScalarStyle.FOLDED));
 
         expect(doc.toString(), equals('{YAML: test}'));
@@ -30,7 +30,7 @@ void main() {
       test('wraps string in double-quotes if it contains dangerous characters',
           () {
         final doc = YamlEditor("{YAML: YAML Ain't Markup Language}");
-        doc.assign(
+        doc.update(
             ['YAML'], wrapAsYamlNode('> test', scalarStyle: ScalarStyle.PLAIN));
 
         expect(doc.toString(), equals('{YAML: "> test"}'));
@@ -39,7 +39,7 @@ void main() {
 
       test('list in map', () {
         final doc = YamlEditor('''YAML: YAML Ain't Markup Language''');
-        doc.assign(['YAML'],
+        doc.update(['YAML'],
             wrapAsYamlNode([1, 2, 3], collectionStyle: CollectionStyle.FLOW));
 
         expect(doc.toString(), equals('YAML: [1, 2, 3]'));
@@ -50,7 +50,7 @@ void main() {
 
       test('nested map', () {
         final doc = YamlEditor('''YAML: YAML Ain't Markup Language''');
-        doc.assign(
+        doc.update(
             ['YAML'],
             wrapAsYamlNode({'YAML': "YAML Ain't Markup Language"},
                 collectionStyle: CollectionStyle.FLOW));
@@ -64,7 +64,7 @@ void main() {
 
       test('nested list', () {
         final doc = YamlEditor('- 0');
-        doc.assign(
+        doc.update(
             [0],
             wrapAsYamlNode([
               1,
@@ -90,7 +90,7 @@ void main() {
 
       test('different scalars in block list!', () {
         final doc = YamlEditor('- 0');
-        doc.assign(
+        doc.update(
             [0],
             wrapAsYamlNode([
               wrapAsYamlNode('plain string', scalarStyle: ScalarStyle.PLAIN),
@@ -124,7 +124,7 @@ void main() {
 
       test('different scalars in block map!', () {
         final doc = YamlEditor('strings: strings');
-        doc.assign(
+        doc.update(
             ['strings'],
             wrapAsYamlNode({
               'plain': wrapAsYamlNode('string', scalarStyle: ScalarStyle.PLAIN),
@@ -160,7 +160,7 @@ strings:
 
       test('different scalars in flow list!', () {
         final doc = YamlEditor('[0]');
-        doc.assign(
+        doc.update(
             [0],
             wrapAsYamlNode([
               wrapAsYamlNode('plain string', scalarStyle: ScalarStyle.PLAIN),
@@ -190,7 +190,7 @@ strings:
 
       test('wraps non-printable strings in double-quotes in flow context', () {
         final doc = YamlEditor('[0]');
-        doc.assign([0], '\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"');
+        doc.update([0], '\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"');
         expect(
             doc.toString(), equals('["\\0\\a\\b\\v\\f\\r\\e\\N\\_\\L\\P\\""]'));
         expectYamlBuilderValue(
@@ -199,7 +199,7 @@ strings:
 
       test('wraps non-printable strings in double-quotes in block context', () {
         final doc = YamlEditor('- 0');
-        doc.assign([0], '\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"');
+        doc.update([0], '\x00\x07\x08\x0b\x0c\x0d\x1b\x85\xa0\u2028\u2029"');
         expect(
             doc.toString(), equals('- "\\0\\a\\b\\v\\f\\r\\e\\N\\_\\L\\P\\""'));
         expectYamlBuilderValue(
@@ -208,7 +208,7 @@ strings:
 
       test('generates folded strings properly', () {
         final doc = YamlEditor('');
-        doc.assign(
+        doc.update(
             [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
         expect(doc.toString(), equals('>-\n  test\n\n  test'));
       });
@@ -218,7 +218,7 @@ strings:
 - >
     folded string
 ''');
-        doc.assign(
+        doc.update(
             [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
         expect(doc.toString(), equals('''
 - >-
@@ -232,7 +232,7 @@ strings:
         final doc = YamlEditor('''
 - >
     folded string''');
-        doc.assign(
+        doc.update(
             [0], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.FOLDED));
         expect(doc.toString(), equals('''
 - >-
@@ -243,7 +243,7 @@ strings:
 
       test('generates literal strings properly', () {
         final doc = YamlEditor('');
-        doc.assign(
+        doc.update(
             [], wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
         expect(doc.toString(), equals('|-\n  test\n  test'));
       });
@@ -253,7 +253,7 @@ strings:
 - |
     literal string
 ''');
-        doc.assign([0],
+        doc.update([0],
             wrapAsYamlNode('test\ntest', scalarStyle: ScalarStyle.LITERAL));
         expect(doc.toString(), equals('''
 - |-
@@ -266,7 +266,7 @@ strings:
         final doc = YamlEditor('''
 {1: 1}
 ''');
-        doc.assign([
+        doc.update([
           1
         ], [
           wrapAsYamlNode('d9]zH`FoYC/>]', scalarStyle: ScalarStyle.LITERAL)
@@ -284,7 +284,7 @@ strings:
 a:
   c: 1
 ''');
-        doc.assign([
+        doc.update([
           'a'
         ], {
           'f': wrapAsYamlNode('', scalarStyle: ScalarStyle.LITERAL),
@@ -303,7 +303,7 @@ a:
 a:
   c: 1
 ''');
-        doc.assign([
+        doc.update([
           'a'
         ], {
           'f': wrapAsYamlNode(' a', scalarStyle: ScalarStyle.LITERAL),

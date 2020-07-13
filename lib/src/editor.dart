@@ -12,17 +12,18 @@ import 'strings.dart';
 import 'utils.dart';
 import 'wrap.dart';
 
-/// An interface for modififying [YAML][1] documents while preserving comments and
-/// whitespaces.
+/// An interface for modififying [YAML][1] documents while preserving comments
+/// and whitespaces.
 ///
-/// YAML parsing is supported by `package:yaml`, and modifications are performed as
-/// string operations. Each time a modification takes place via one of the public
-/// methods, we calculate the expected final result, and parse the result YAML string,
-/// and ensure the two YAML trees match, throwing an [AssertionError] otherwise. Such a situation
-/// should be extremely rare, and should only occur with degenerate formatting.
+/// YAML parsing is supported by `package:yaml`, and modifications are performed
+/// as string operations. Each time a modification takes place via one of the
+/// public methods, we calculate the expected final result, and parse the result
+/// YAML string, and ensure the two YAML trees match, throwing an
+/// [AssertionError] otherwise. Such a situation should be extremely rare, and
+/// should only occur with degenerate formatting.
 ///
-/// Most modification methods require the user to pass in an Iterable<Object> path that
-/// holds the keys/indices to navigate to the element.
+/// Most modification methods require the user to pass in an [Iterable<Object>]
+/// path that holds the keys/indices to navigate to the element.
 ///
 /// For example,
 ///
@@ -35,19 +36,21 @@ import 'wrap.dart';
 ///   - {e: 5, f: [6, 7]}
 /// ```
 ///
-/// To get to `7`, our path will be `['c', 2, 'f', 1]`. The path for the base object is the
-/// empty array `[]`. All modification methods will throw an [Error] if the path
-/// provided is invalid. Note also that that the order of elements in the path is important,
-/// and it should be arranged in order of calling, with the first element being the first
-/// key or index to be called.
+/// To get to `7`, our path will be `['c', 2, 'f', 1]`. The path for the base
+/// object is the empty array `[]`. All modification methods will throw an
+/// [Error] if the path provided is invalid. Note also that that the order of
+/// elements in the path is important, and it should be arranged in order of
+/// calling, with the first element being the first key or index to be called.
 ///
-/// To dump the YAML after all the modifications have been completed, simply call [toString()].
+/// To dump the YAML after all the modifications have been completed, simply
+/// call [toString()].
 ///
 /// [1]: https://yaml.org/
 @sealed
 class YamlEditor {
-  /// List of [SourceEdit]s that have been applied to [_yaml] since the creation of this
-  /// instance, in chronological order. Intended to be compatible with `package:analysis_server`.
+  /// List of [SourceEdit]s that have been applied to [_yaml] since the creation
+  /// of this instance, in chronological order. Intended to be compatible with
+  /// `package:analysis_server`.
   final List<SourceEdit> _edits = [];
 
   UnmodifiableListView<SourceEdit> get edits =>
@@ -65,17 +68,17 @@ class YamlEditor {
   @override
   String toString() => _yaml;
 
-  /// Returns the detected indentation level used for this YAML document, or defaults
-  /// to a value of `2` if no indentation level can be detected.
+  /// Returns the detected indentation step used for this YAML document, or
+  /// defaults to a value of `2` if no indentation step can be detected.
   ///
-  /// Indentation level is determined by the difference in indentation of the first
-  /// block-styled yaml collection in the second level as compared to the top-level
-  /// elements. In the case where there are multiple possible candidates, we choose
-  /// the candidate closest to the start of [_yaml].
+  /// Indentation step is determined by the difference in indentation of the
+  /// first block-styled yaml collection in the second level as compared to the
+  /// top-level elements. In the case where there are multiple possible
+  /// candidates, we choose the candidate closest to the start of [_yaml].
   int get indentation {
     if (_indentation == null) {
       final node = _contents;
-      var children;
+      Iterable<YamlNode> children;
 
       if (node is YamlMap && node.style == CollectionStyle.BLOCK) {
         children = node.nodes.values;
@@ -130,29 +133,29 @@ class YamlEditor {
 
   YamlEditor._(this._yaml) {
     ArgumentError.checkNotNull(_yaml);
-    initialize();
+    _initialize();
   }
 
-  void initialize() {
+  void _initialize() {
     _contents = loadYamlNode(_yaml);
     _aliases = {};
 
     var stack = [_contents];
-    var map = <YamlNode, bool>{};
+    var encounteredNodes = <YamlNode>{};
 
     while (stack.isNotEmpty) {
-      var nextElem = stack.removeLast();
+      var nextElement = stack.removeLast();
 
-      if (map[nextElem] == null) {
-        map[nextElem] = true;
+      if (!encounteredNodes.contains(nextElement)) {
+        encounteredNodes.add(nextElement);
       } else {
-        _aliases.add(nextElem);
+        _aliases.add(nextElement);
       }
 
-      if (nextElem is YamlMap) {
-        stack.addAll(nextElem.nodes.values);
-      } else if (nextElem is YamlList) {
-        stack.addAll(nextElem.nodes);
+      if (nextElement is YamlMap) {
+        stack.addAll(nextElement.nodes.values);
+      } else if (nextElement is YamlList) {
+        stack.addAll(nextElement.nodes);
       }
     }
 
@@ -160,14 +163,18 @@ class YamlEditor {
     _indentation = null;
   }
 
-  /// Parses the document to return [YamlNode] currently present at [path]. If no [YamlNode]s exist
-  /// at [path], [parseAt] will return a [YamlNode]-wrapped [orElse] if it is defined, or throw an
-  /// [Error] otherwise. The value passed to [orElse] has to be a valid YAML element (i.e. scalar/ list/ map).
+  /// Parses the document to return [YamlNode] currently present at [path].
   ///
-  /// To get `null` when [path] does not point to a value in the [YamlNode]-tree, simply pass `orElse: null`.
+  /// If no [YamlNode]s exist at [path], the result of invoking the [orElse]
+  /// function is returned.
+  ///
+  /// If [orElse] is omitted, it defaults to throwing a [PathError].
+  ///
+  /// To get `null` when [path] does not point to a value in the [YamlNode]-tree,
+  /// simply pass `orElse: () => null`.
   /// ```dart
   /// final myYamlEditor('{"key": "value"}');
-  /// final value = myYamlEditor.valueAt(['invalid', 'path'], orElse: null);
+  /// final value = myYamlEditor.valueAt(['invalid', 'path'], orElse: () => null);
   /// print(value) // null
   /// ```
   ///
@@ -183,15 +190,15 @@ class YamlEditor {
   /// print(doc.parseAt(['b', 'e', 2])); // 7
   /// ```
   ///
-  /// To illustrate that [parseAt] returns a [YamlNode] that can be invalidated if modifications are
-  /// performed to the document,
+  /// To illustrate that [parseAt] returns a [YamlNode] that can be invalidated
+  /// if modifications are performed to the document,
   /// ```dart
   /// final doc = YamlEditor("YAML: YAML Ain't Markup Language");
   /// final node = doc.parseAt(['YAML']);
   ///
   /// print(node.value); // Expected output: "YAML Ain't Markup Language"
   ///
-  /// doc.assign(['YAML'], 'YAML');
+  /// doc.update(['YAML'], 'YAML');
   ///
   /// final newNode = doc.parseAt(['YAML']);
   ///
@@ -199,24 +206,18 @@ class YamlEditor {
   /// print(newNode.value); // "YAML"
   /// print(node.value); // "YAML Ain't Markup Language"
   /// ```
-  YamlNode parseAt(Iterable<Object> path, {Object orElse = #noArg}) {
+  YamlNode parseAt(Iterable<Object> path, {YamlNode Function() orElse}) {
     ArgumentError.checkNotNull(path, 'path');
 
-    try {
-      return _traverse(path);
-    } on PathError {
-      if (orElse == #noArg) rethrow;
-
-      return wrapAsYamlNode(orElse);
-    }
+    return _traverse(path, orElse: orElse);
   }
 
   /// Sets [value] in the [path].
   ///
-  /// Note that [assign] provides a different result as compared to a [remove] followed by an
-  /// [insertIntoList], because it preserves comments at the same level.
+  /// Note that [update] provides a different result than a [remove] followed by
+  /// an [insertIntoList], because it preserves comments at the same level.
   ///
-  /// Throws if [path] is invalid.
+  /// Throws a [PathError] if [path] is invalid.
   ///
   /// ```dart
   /// final doc = YamlEditor('''
@@ -224,7 +225,7 @@ class YamlEditor {
   ///   - 1 # comment
   ///   - 2
   /// ''');
-  /// doc.assign([1], 'test');
+  /// doc.update([1], 'test');
   /// ```
   ///
   /// Expected Output:
@@ -250,7 +251,7 @@ class YamlEditor {
   ///   - test
   ///   - 2
   /// ```
-  void assign(Iterable<Object> path, Object value) {
+  void update(Iterable<Object> path, Object value) {
     ArgumentError.checkNotNull(path, 'path');
 
     if (path.isEmpty) {
@@ -274,7 +275,7 @@ class YamlEditor {
       final expectedList =
           updatedYamlList(parentNode, (nodes) => nodes[keyOrIndex] = valueNode);
 
-      _performEdit(assignInList(this, parentNode, keyOrIndex, value),
+      _performEdit(updateInList(this, parentNode, keyOrIndex, value),
           collectionPath, expectedList);
       return;
     }
@@ -284,7 +285,7 @@ class YamlEditor {
 
       final expectedMap =
           updatedYamlMap(parentNode, (nodes) => nodes[keyNode] = valueNode);
-      _performEdit(assignInMap(this, parentNode, keyOrIndex, value),
+      _performEdit(updateInMap(this, parentNode, keyOrIndex, value),
           collectionPath, expectedMap);
       return;
     }
@@ -293,9 +294,10 @@ class YamlEditor {
         path, 'Scalar $parentNode does not have key $keyOrIndex');
   }
 
-  /// Appends [value] into the list at [path].
+  /// Appends [value] to the list at [path].
   ///
-  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
+  /// Throws a [PathError] if the element at the given path is not a [YamlList]
+  /// or if the path is invalid.
   void appendToList(Iterable<Object> path, Object value) {
     ArgumentError.checkNotNull(path, 'path');
     final yamlList = _traverseToList(path);
@@ -303,21 +305,22 @@ class YamlEditor {
     insertIntoList(path, yamlList.length, value);
   }
 
-  /// Prepends [value] into the list at [path].
+  /// Prepends [value] to the list at [path].
   ///
-  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
+  /// Throws a [PathError] if the element at the given path is not a [YamlList]
+  /// or if the path is invalid.
   void prependToList(Iterable<Object> path, Object value) {
     ArgumentError.checkNotNull(path, 'path');
 
     insertIntoList(path, 0, value);
   }
 
-  /// Inserts [value] into the list at [path], only if the element at the given path
-  /// is a list.
+  /// Inserts [value] into the list at [path].
   ///
   /// [index] must be non-negative and no greater than the list's length.
   ///
-  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
+  /// Throws a [PathError] if the element at the given path is not a [YamlList]
+  /// or if the path is invalid.
   void insertIntoList(Iterable<Object> path, int index, Object value) {
     ArgumentError.checkNotNull(path, 'path');
 
@@ -332,11 +335,15 @@ class YamlEditor {
     _performEdit(edit, path, expectedList);
   }
 
-  /// Changes the contents of the list at [path] by removing [deleteCount] items at [index], and
-  /// inserts [values] in-place.
+  /// Changes the contents of the list at [path] by removing [deleteCount] items
+  /// at [index], and inserting [values] in-place. Returns the elements that
+  /// are deleted.
   ///
-  /// [index] and [deleteCount] must be non-negative and, [index] + [deleteCount] must be no
-  /// greater than the list's length. Throws otherwise or if [path] is invalid.
+  /// [index] and [deleteCount] must be non-negative and [index] + [deleteCount]
+  /// must be no greater than the list's length.
+  ///
+  /// Throws a [PathError] if the element at the given path is not a [YamlList]
+  /// or if the path is invalid.
   ///
   /// ```dart
   /// final doc = YamlEditor('[Jan, March, April, June]');
@@ -374,9 +381,27 @@ class YamlEditor {
     return nodesToRemove;
   }
 
-  /// Removes the node at [path].
+  /// Removes the node at [path]. Comments "belonging" to the node will be
+  /// removed while surrounding comments will be left untouched
   ///
-  /// Throws if [path] is invalid.
+  /// ```dart
+  /// final doc = YamlEditor('''
+  /// - 0 # comment 0
+  /// # comment A
+  /// - 1 # comment 1
+  /// # comment B
+  /// - 2 # comment 2
+  /// ''');
+  /// doc.remove([1]);
+  ///
+  /// // Expected Result:
+  /// // - 0 # comment 0
+  /// // # comment A
+  /// // # comment B
+  /// // - 2 # comment 2
+  /// ```
+  ///
+  /// Throws a [PathError] if [path] is invalid.
   YamlNode remove(Iterable<Object> path) {
     ArgumentError.checkNotNull(path, 'path');
 
@@ -387,6 +412,7 @@ class YamlEditor {
     if (path.isEmpty) {
       edit = SourceEdit(0, _yaml.length, '');
 
+      /// Parsing an empty YAML document returns `null`.
       _performEdit(edit, path, expectedNode);
       return nodeToRemove;
     }
@@ -412,10 +438,17 @@ class YamlEditor {
     return nodeToRemove;
   }
 
-  /// Traverses down [path] to return the [YamlNode] at [path] if successful, throwing an
-  /// error otherwise. If [checkAlias] is `true`, throw [AliasError] if an aliased node is
+  /// Traverses down [path] to return the [YamlNode] at [path] if successful.
+  ///
+  /// If no [YamlNode]s exist at [path], the result of invoking the [orElse]
+  /// function is returned.
+  ///
+  /// If [orElse] is omitted, it defaults to throwing a [PathError].
+  ///
+  /// If [checkAlias] is `true`, throw [AliasError] if an aliased node is
   /// encountered.
-  YamlNode _traverse(Iterable<Object> path, {bool checkAlias = false}) {
+  YamlNode _traverse(Iterable<Object> path,
+      {bool checkAlias = false, YamlNode Function() orElse}) {
     ArgumentError.checkNotNull(path, 'path');
     ArgumentError.checkNotNull(checkAlias, 'checkAlias');
 
@@ -427,7 +460,7 @@ class YamlEditor {
       if (currentNode is YamlList) {
         final list = currentNode as YamlList;
         if (!isValidIndex(keyOrIndex, list.length)) {
-          throw PathError(path, keyOrIndex, list);
+          return _pathErrorOrElse(path, keyOrIndex, list, orElse);
         }
 
         currentNode = list.nodes[keyOrIndex];
@@ -435,21 +468,30 @@ class YamlEditor {
         final map = currentNode as YamlMap;
 
         if (!containsKey(map, keyOrIndex)) {
-          throw PathError(path, keyOrIndex, map);
+          return _pathErrorOrElse(path, keyOrIndex, map, orElse);
         }
         final keyNode = getKeyNode(map, keyOrIndex);
         currentNode = map.nodes[keyNode];
       } else {
-        throw PathError(path, keyOrIndex, currentNode);
+        return _pathErrorOrElse(path, keyOrIndex, currentNode, orElse);
       }
     }
 
-    // We only have to check at the end, because we count children of aliased nodes as aliases too
+    /// We only have to check at the end, because we count children of aliased
+    /// nodes as aliases too
     if (checkAlias) {
       _assertNoChildAlias(path, currentNode);
     }
 
     return currentNode;
+  }
+
+  /// Throws a [PathError] if [orElse] is not provided, returns the result
+  /// of invoking the [orElse] function otherwise.
+  YamlNode _pathErrorOrElse(Iterable<Object> path, Object invalidKeyOrIndex,
+      Object parentNode, YamlNode Function() orElse) {
+    if (orElse == null) throw PathError(path, invalidKeyOrIndex, parentNode);
+    return orElse();
   }
 
   /// Asserts that none of the children of [node] are aliases
@@ -481,9 +523,9 @@ class YamlEditor {
   ///
   /// Convenience function to ensure that a [YamlList] is returned.
   ///
-  /// Throws if the element at the given path is not a [YamlList] or if the path is invalid.
-  /// If [checkAlias] is `true`, and an aliased node is encountered along [path], an error
-  /// will be similarly thrown.
+  /// Throws [PathError] if the element at the given path is not a [YamlList] or
+  /// if the path is invalid. If [checkAlias] is `true`, and an aliased node is
+  /// encountered along [path], an [AliasError] will be similarly thrown.
   YamlList _traverseToList(Iterable<Object> path, {bool checkAlias = false}) {
     ArgumentError.checkNotNull(path, 'path');
     ArgumentError.checkNotNull(checkAlias, 'checkAlias');
@@ -501,8 +543,8 @@ class YamlEditor {
   /// Utility method to replace the substring of [_yaml] according to [edit].
   ///
   /// When [_yaml] is modified with this method, the resulting string is parsed
-  /// and reloaded and traversed down [path] to ensure that the reloaded YAML tree
-  /// is equal to our expectations by deep equality of values. Throws an
+  /// and reloaded and traversed down [path] to ensure that the reloaded YAML
+  /// tree is equal to our expectations by deep equality of values. Throws an
   /// [AssertionError] if the two trees do not match.
   void _performEdit(
       SourceEdit edit, Iterable<Object> path, YamlNode expectedNode) {
@@ -511,7 +553,7 @@ class YamlEditor {
 
     final expectedTree = _deepModify(_contents, path, expectedNode);
     _yaml = edit.apply(_yaml);
-    initialize();
+    _initialize();
 
     final actualTree = loadYamlNode(_yaml);
     if (!deepEquals(actualTree, expectedTree)) {
@@ -529,14 +571,15 @@ $expectedTree''');
     _edits.add(edit);
   }
 
-  /// Utility method to produce an updated YAML tree equivalent to converting the [YamlNode]
-  /// at [path] to be [expectedNode].
+  /// Utility method to produce an updated YAML tree equivalent to converting
+  /// the [YamlNode] at [path] to be [expectedNode].
   ///
-  /// Throws if path is invalid.
+  /// Throws a [PathError] if path is invalid.
   ///
-  /// When called, it creates a new [YamlNode] of the same type as [tree], and copies its children
-  /// over, except for the child that is on the path. Doing so allows us to "update" the immutable
-  /// [YamlNode] without having to clone the whole tree.
+  /// When called, it creates a new [YamlNode] of the same type as [tree], and
+  /// copies its children over, except for the child that is on the path. Doing
+  /// so allows us to "update" the immutable [YamlNode] without having to clone
+  /// the whole tree.
   ///
   /// [SourceSpan]s in this new tree are not guaranteed to be accurate.
   YamlNode _deepModify(
@@ -584,7 +627,8 @@ $expectedTree''');
       throw UnsupportedError('Unable to get indentation for empty block map');
     }
 
-    /// Use the number of spaces between the last key and the newline as indentation.
+    /// Use the number of spaces between the last key and the newline as
+    /// indentation.
     final lastKey = map.nodes.keys.last as YamlNode;
     final lastSpanOffset = lastKey.span.start.offset;
     final lastNewLine = _yaml.lastIndexOf('\n', lastSpanOffset);

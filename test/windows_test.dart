@@ -1,5 +1,5 @@
-import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:test/test.dart';
 
 import 'test_utils.dart';
 
@@ -54,7 +54,7 @@ c: 3\r
       ]);
     });
 
-    test('assign nested scalar -> flow list', () {
+    test('update nested scalar -> flow list', () {
       final doc = YamlEditor('''
 a: 1\r
 b: \r
@@ -62,7 +62,7 @@ b: \r
   e: 5\r
 c: 3\r
 ''');
-      doc.assign(['b', 'e'], [1, 2, 3]);
+      doc.update(['b', 'e'], [1, 2, 3]);
 
       expect(doc.toString(), equals('''
 a: 1\r
@@ -84,14 +84,14 @@ c: 3\r
       });
     });
 
-    test('assignh in nested list flow map -> scalar', () {
+    test('update in nested list flow map -> scalar', () {
       final doc = YamlEditor('''
 - 0\r
 - {a: 1, b: 2}\r
 - 2\r
 - 3\r
 ''');
-      doc.assign([1], 4);
+      doc.update([1], 4);
       expect(doc.toString(), equals('''
 - 0\r
 - 4\r

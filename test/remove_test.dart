@@ -1,5 +1,5 @@
-import 'package:test/test.dart';
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:test/test.dart';
 
 import 'test_utils.dart';
 
@@ -225,16 +225,16 @@ b:
     });
     test('with comments', () {
       final doc = YamlEditor('''
-- 0 # comment 0
-- 1 # comment 1
-- 2 # comment 2
-- 3 # comment 3
+- 0
+- 1 # comments
+- 2
+- 3
 ''');
       doc.remove([1]);
       expect(doc.toString(), equals('''
-- 0 # comment 0
-- 2 # comment 2
-- 3 # comment 3
+- 0
+- 2
+- 3
 '''));
       expectYamlBuilderValue(doc, [0, 2, 3]);
     });

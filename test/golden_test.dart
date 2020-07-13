@@ -10,19 +10,21 @@ import './test_case.dart';
 /// be in `test/test_cases_golden`.
 ///
 /// For more information on the expected input and output, refer to the README
-void main() async {
+/// in the testdata folder
+Future<void> main() async {
   final packageUri = await Isolate.resolvePackageUri(
       Uri.parse('package:yaml_edit/yaml_edit.dart'));
-  final testdataPath = packageUri.resolve('../test/testdata').path;
-  final inputDirectory = Directory('$testdataPath/input');
-  final goldDirectory = Directory('$testdataPath/output');
+
+  final testdataUri = packageUri.resolve('../test/testdata/');
+  final inputDirectory = Directory.fromUri(testdataUri.resolve('input/'));
+  final goldDirectoryUri = testdataUri.resolve('output/');
 
   if (!inputDirectory.existsSync()) {
     throw ('Testing Directory does not exist!');
   }
 
   final testCases =
-      await TestCases.getTestCases(inputDirectory.path, goldDirectory.path);
+      await TestCases.getTestCases(inputDirectory.uri, goldDirectoryUri);
 
   testCases.test();
 }

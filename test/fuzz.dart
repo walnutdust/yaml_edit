@@ -1,10 +1,9 @@
 import 'dart:math';
 
 import 'package:yaml/yaml.dart';
-import 'package:yaml_edit/src/wrap.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
-import 'blns/blns.dart';
+import 'problem_strings.dart';
 import 'test_utils.dart';
 
 /// Performs naive fuzzing on an initial YAML file based on an initial seed.
@@ -12,8 +11,8 @@ void main(List<String> args) {
   final seed = args.isEmpty ? 0 : int.tryParse(args[0]);
   final generator = Generator(seed);
 
-  final roundsOfTesting = 10;
-  final modificationsPerRound = 100;
+  const roundsOfTesting = 10;
+  const modificationsPerRound = 100;
 
   for (var i = 0; i < roundsOfTesting; i++) {
     final editor = YamlEditor('''
@@ -48,23 +47,6 @@ class Generator {
   /// 2^32
   static const int maxInt = 4294967296;
 
-  static const List<String> naughtyYAMLStrings = [
-    '',
-    ' ',
-    '~',
-    'null',
-    'Null',
-    'NULL',
-    'true',
-    'True',
-    'TRUE',
-    'false',
-    'False',
-    'FALSE',
-    '[]',
-    '{}'
-  ];
-
   Generator([int seed]) : r = Random(seed ?? 42);
 
   int nextInt([int max = maxInt]) => r.nextInt(max);
@@ -78,11 +60,7 @@ class Generator {
   /// ascii 32 - 127.
   String nextString() {
     if (nextBool()) {
-      return naughtyStrings[nextInt(naughtyStrings.length)];
-    }
-
-    if (nextBool()) {
-      return naughtyYAMLStrings[nextInt(naughtyYAMLStrings.length)];
+      return problemStrings[nextInt(problemStrings.length)];
     }
 
     final length = nextInt(100);
@@ -106,7 +84,7 @@ class Generator {
       case 1:
         return nextDouble();
       case 2:
-        return nextInt(maxInt);
+        return nextInt();
       case 3:
         return null;
       default:
@@ -174,12 +152,12 @@ class Generator {
           case YamlModificationMethod.remove:
             editor.remove(path);
             break;
-          case YamlModificationMethod.assign:
+          case YamlModificationMethod.update:
             if (node.isEmpty) break;
             final index = nextInt(node.length);
             args.add(nextYamlNode());
             path.add(index);
-            editor.assign(path, args[0]);
+            editor.update(path, args[0]);
             break;
           case YamlModificationMethod.appendTo:
             args.add(nextYamlNode());
@@ -229,11 +207,11 @@ ${error.message}
       }
       final value = nextYamlNode();
       try {
-        editor.assign(path, value);
+        editor.update(path, value);
         return;
       } catch (error) {
         print('''
-Failed to call assign on:
+Failed to call update on:
 $editor
 with the following arguments:
 $value
@@ -257,12 +235,8 @@ ${error.message}
   List<Object> findPath(YamlEditor editor) {
     final path = [];
 
-    while (true) {
-      // 50% chance of stopping at the collection
-      if (nextBool()) {
-        break;
-      }
-
+    // 50% chance of stopping at the collection
+    while (nextBool()) {
       final node = editor.parseAt(path);
 
       if (node is YamlList && node.isNotEmpty) {

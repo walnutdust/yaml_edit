@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
-import 'package:yaml_edit/src/equality.dart';
-import 'package:yaml_edit/src/errors.dart';
+
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:yaml_edit/src/errors.dart';
 
 /// Asserts that a string containing a single YAML document is unchanged
 /// when dumped right after loading.
@@ -33,9 +33,9 @@ Matcher throwsAliasError = throwsA(isA<AliasError>());
 /// Enum to hold the possible modification methods.
 enum YamlModificationMethod {
   appendTo,
-  assign,
-  remove,
-  prependTo,
   insert,
-  splice
+  prependTo,
+  remove,
+  splice,
+  update,
 }
