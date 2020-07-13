@@ -608,6 +608,39 @@ b: 2
         expectYamlBuilderValue(doc, {'a': 1, 'b': 2});
       });
 
+      test('(3)', () {
+        final doc = YamlEditor('''
+deps:
+  a: 1
+  z: 1
+''');
+        doc.update([
+          'deps',
+          'retry'
+        ], {
+          'git': {'url': 'url', 'path': 'retry'}
+        });
+
+        expect(doc.toString(), equals('''
+deps:
+  a: 1
+  retry: 
+    git:
+      url: url
+      path: retry
+  z: 1
+'''));
+        expectYamlBuilderValue(doc, {
+          'deps': {
+            'a': 1,
+            'retry': {
+              'git': {'url': 'url', 'path': 'retry'}
+            },
+            'z': 1
+          }
+        });
+      });
+
       test('with complex keys', () {
         final doc = YamlEditor('''
 ? Sammy Sosa
