@@ -121,6 +121,7 @@ class YamlEditor {
           unixNewlines++;
         }
       }
+
       _isWindowsEnding = windowsNewlines > unixNewlines;
     }
 
