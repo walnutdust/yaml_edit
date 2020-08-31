@@ -2,6 +2,8 @@
 
 A library for [YAML](https://yaml.org) manipulation while preserving comments.
 
+**Notice: Development efforts have moved to [dart-neats](https://github.com/google/dart-neats)**
+
 ## Usage
 
 A simple usage example:
